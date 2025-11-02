@@ -115,7 +115,7 @@ class RegisterScreen extends StatelessWidget {
                       border: Border.all(color: Colors.grey[300]!),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withValues(),
                           blurRadius: 4,
                           offset: const Offset(0, 2),
                         ),
@@ -129,45 +129,6 @@ class RegisterScreen extends StatelessWidget {
                         const Text(
                           'Continuar com Google',
                           style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-
-                // Botão Apple
-                GestureDetector(
-                  onTap: () {},
-                  child: Container(
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.08),
-                          blurRadius: 6,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Image.asset(
-                          'assets/apple.png',
-                          height: 22,
-                          color: Colors.white,
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'Continuar com Apple',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                          ),
                         ),
                       ],
                     ),
