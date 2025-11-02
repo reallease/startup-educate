@@ -1,3 +1,4 @@
+import 'package:educate_app/features/auth/view/pages/register_screen.dart';
 import 'package:flutter/material.dart';
 import 'custom_field.dart';
 
@@ -159,7 +160,12 @@ class LoginScreen extends StatelessWidget {
                     children: [
                       const Text('Não tem uma conta? '),
                       GestureDetector(
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.push(
+                            context, 
+                            MaterialPageRoute(builder: (context) => RegisterScreen())
+                          );
+                        },
                         child: const Text(
                           'Cadastre-se gratuitamente',
                           style: TextStyle(
