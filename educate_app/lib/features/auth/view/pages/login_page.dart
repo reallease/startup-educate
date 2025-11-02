@@ -109,7 +109,7 @@ class LoginScreen extends StatelessWidget {
                       elevation: 4,
                     ),
                     onPressed: () {},
-                    child: const Text('Entrar', style: TextStyle(fontSize: 16)),
+                    child: const Text('Entrar', style: TextStyle(fontSize: 16, color: Colors.white)),
                   ),
                 ),
 
@@ -126,13 +126,6 @@ class LoginScreen extends StatelessWidget {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.grey[300]!),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,

@@ -85,13 +85,12 @@ class RegisterScreen extends StatelessWidget {
                     onPressed: () {},
                     child: const Text(
                       'Cadastrar',
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(fontSize: 16, color: Colors.white),
                     ),
                   ),
                 ),
                 const SizedBox(height: 25),
 
-                // Linha "ou continue com"
                 Row(
                   children: [
                     Expanded(child: Divider(color: Colors.grey[300], thickness: 1)),
@@ -112,14 +111,7 @@ class RegisterScreen extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[300]!),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
+                      border: Border.all(color: Colors.grey[300]!),                
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
