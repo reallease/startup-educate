@@ -1,3 +1,4 @@
+import 'package:educate_app/features/auth/view/pages/home_page.dart';
 import 'package:educate_app/features/auth/view/pages/login_page.dart';
 import 'package:flutter/material.dart';
 
@@ -19,7 +20,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF00B97E)),
         useMaterial3: true,
       ),
-      home: LoginScreen(), // tela inicial do app
+      home: HomePage(), // tela inicial do app
     );
   }
 }

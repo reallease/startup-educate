@@ -114,7 +114,16 @@ class LoginScreen extends StatelessWidget {
                 ),
 
                 const SizedBox(height: 15),
-                const Center(child: Text('ou continue com')),
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: Colors.grey[300], thickness: 1)),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Text('ou continue com', style: TextStyle(color: Colors.grey)),
+                    ),
+                    Expanded(child: Divider(color: Colors.grey[300], thickness: 1)),
+                  ],
+                ),
                 const SizedBox(height: 15),
 
                 // Botões de login social
