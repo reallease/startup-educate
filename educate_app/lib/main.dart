@@ -1,3 +1,4 @@
+import 'package:educate_app/features/auth/view/pages/login_page.dart';
 import 'package:flutter/material.dart';
 
 void main() {
@@ -10,10 +11,15 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Educate',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      )
+        fontFamily: 'Poppins', // opcional, pra deixar bonito
+        scaffoldBackgroundColor: const Color(0xFFF5F5F5),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF00B97E)),
+        useMaterial3: true,
+      ),
+      home: LoginScreen(), // tela inicial do app
     );
   }
 }
