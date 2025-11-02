@@ -15,7 +15,7 @@ class HomePage extends StatelessWidget {
             children: [
               // Saudação
               const Text(
-                'Olá, Maria!',
+                'Olá, Thomas!',
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 4),
