@@ -60,8 +60,8 @@ class HomePage extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildStatCard('85%', 'Taxa de Acerto'),
-                  _buildStatCard('124', 'Questões Resolvidas'),
+                  _buildStatCard('89%', 'Taxa de Acerto'),
+                  _buildStatCard('3.050', 'Questões Resolvidas'),
                 ],
               ),
               const SizedBox(height: 20),
