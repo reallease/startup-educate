@@ -1,6 +1,5 @@
 import 'package:educate_app/features/pages/home/pages/home_page.dart';
 import 'package:educate_app/features/pages/profile/profile_page.dart';
-import 'package:educate_app/features/pages/progress/progress_page.dart';
 import 'package:educate_app/features/pages/study/study_page.dart';
 import 'package:flutter/material.dart';
 
@@ -17,7 +16,6 @@ class _MainScreenState extends State<MainScreen> {
   final List<Widget> _pages = const [
     HomePage(),
     StudyPage(),
-    ProgressPage(),
     ProfilePage()
   ];
 
@@ -40,7 +38,6 @@ class _MainScreenState extends State<MainScreen> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Início'),
           BottomNavigationBarItem(icon: Icon(Icons.school), label: 'Estudar'),
-          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Progresso'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
         ],
       ),
