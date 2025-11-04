@@ -1,4 +1,6 @@
 import 'package:educate_app/features/pages/home/pages/home_page.dart';
+import 'package:educate_app/features/pages/profile/profile_page.dart';
+import 'package:educate_app/features/pages/progress/progress_page.dart';
 import 'package:educate_app/features/pages/study/study_page.dart';
 import 'package:flutter/material.dart';
 
@@ -14,7 +16,9 @@ class _MainScreenState extends State<MainScreen> {
 
   final List<Widget> _pages = const [
     HomePage(),
-    StudyPage()
+    StudyPage(),
+    ProgressPage(),
+    ProfilePage()
   ];
 
   void _onItemTapped(int index) {
