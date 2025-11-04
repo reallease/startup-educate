@@ -1,4 +1,4 @@
-import 'package:educate_app/features/home/pages/main_screen.dart';
+import 'package:educate_app/features/pages/main_screen.dart';
 // import 'package:educate_app/features/auth/view/pages/login_page.dart';'
 import 'package:flutter/material.dart';
 

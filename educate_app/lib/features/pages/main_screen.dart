@@ -1,5 +1,5 @@
-import 'package:educate_app/features/home/pages/home_page.dart';
-import 'package:educate_app/features/home/pages/study_page.dart';
+import 'package:educate_app/features/pages/home/pages/home_page.dart';
+import 'package:educate_app/features/pages/study/study_page.dart';
 import 'package:flutter/material.dart';
 
 class MainScreen extends StatefulWidget {
