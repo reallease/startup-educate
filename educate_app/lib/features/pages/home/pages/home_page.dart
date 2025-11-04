@@ -13,7 +13,6 @@ class HomePage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Saudação
               const Text(
                 'Olá, Thomas!',
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
@@ -25,7 +24,6 @@ class HomePage extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
-              // Sequência de estudos
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -59,7 +57,6 @@ class HomePage extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
-              // Estatísticas
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -69,7 +66,6 @@ class HomePage extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
-              // Ações rápidas
               const Text(
                 'Ações Rápidas',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -84,7 +80,6 @@ class HomePage extends StatelessWidget {
               ),
               const SizedBox(height: 25),
 
-              // Matérias em destaque
               const Text(
                 'Matérias em Destaque',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -95,7 +90,6 @@ class HomePage extends StatelessWidget {
               _buildSubjectCard('Química', 8, Colors.purple),
               const SizedBox(height: 25),
 
-              // Atividade recente
               const Text(
                 'Atividade Recente',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
