@@ -91,7 +91,7 @@ class ConcursosScreen extends StatelessWidget {
                 subtitle: '60 questões • 1h30min',
                 tags: ['Matemática', 'Português', 'Conhecimento Gerais', 'Segurança', 'Leis'],
                 statusColor: const Color.fromARGB(255, 16, 212, 52),
-                statusText: 'Em andamento',
+                statusText: 'Não iniciado',
                 progress: 0.0,
                 actionText: 'Iniciar',
                 actionColor: Colors.orange,
