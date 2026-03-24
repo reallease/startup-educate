@@ -26,15 +26,6 @@ class RegisterScreen extends StatelessWidget {
               children: [
                 const SizedBox(height: 8),
                 const Text(
-                  'Estudate',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-                ),
-                const Text(
-                  'Vestibulares & Concursos',
-                  style: TextStyle(color: Colors.grey),
-                ),
-                const SizedBox(height: 25),
-                const Text(
                   'Crie sua conta',
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
@@ -45,8 +36,6 @@ class RegisterScreen extends StatelessWidget {
                   style: TextStyle(color: Colors.grey),
                 ),
                 const SizedBox(height: 25),
-
-                // Campos
                 CustomTextField(
                   label: 'Nome completo',
                   hint: 'Seu nome',
@@ -69,8 +58,6 @@ class RegisterScreen extends StatelessWidget {
                   controller: passwordController,
                 ),
                 const SizedBox(height: 25),
-
-                // Botão de cadastro
                 SizedBox(
                   width: double.infinity,
                   height: 48,
@@ -102,8 +89,6 @@ class RegisterScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 20),
-
-                // Botão Google
                 GestureDetector(
                   onTap: () {},
                   child: Container(

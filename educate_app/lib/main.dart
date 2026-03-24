@@ -1,3 +1,4 @@
+import 'package:educate_app/features/auth/view/pages/login_page.dart';
 import 'package:educate_app/features/pages/main_screen.dart';
 // import 'package:educate_app/features/auth/view/pages/login_page.dart';'
 import 'package:flutter/material.dart';
@@ -15,12 +16,12 @@ class MyApp extends StatelessWidget {
       title: 'Educate',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        fontFamily: 'Poppins', // opcional, pra deixar bonito
+        fontFamily: 'Poppins',
         scaffoldBackgroundColor: const Color(0xFFF5F5F5),
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF00B97E)),
         useMaterial3: true,
       ),
-      home: MainScreen(), // tela inicial do app
+      home: LoginScreen(), // tela inicial do app
     );
   }
 }

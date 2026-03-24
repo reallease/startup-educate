@@ -28,7 +28,6 @@ class ProfilePage extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Cabeçalho (sem degradê, mais limpo)
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -63,7 +62,7 @@ class ProfilePage extends StatelessWidget {
                         ),
                         SizedBox(height: 4),
                         Text(
-                          'thomasdavid@gmail.com',
+                          'zuleika244@gmail.com',
                           style: TextStyle(color: Colors.grey),
                         ),
                       ],

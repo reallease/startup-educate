@@ -1,4 +1,6 @@
 import 'package:educate_app/features/auth/view/pages/register_screen.dart';
+import 'package:educate_app/features/pages/home/pages/home_page.dart';
+import 'package:educate_app/features/pages/main_screen.dart';
 import 'package:flutter/material.dart';
 import 'custom_field.dart';
 
@@ -30,18 +32,6 @@ class LoginScreen extends StatelessWidget {
                     children: [
                       const SizedBox(height: 8),
                       const Text(
-                        'Educate',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20,
-                        ),
-                      ),
-                      const Text(
-                        'Vestibulares & Concursos',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                      const SizedBox(height: 20),
-                      const Text(
                         'Bem-vindo de volta!',
                         style: TextStyle(
                           fontSize: 22,
@@ -62,7 +52,7 @@ class LoginScreen extends StatelessWidget {
                 // Campos de entrada
                 CustomTextField(
                   label: 'E-mail',
-                  hint: 'seu@email.com',
+                  hint: 'chico@email.com',
                   icon: Icons.email_outlined,
                   controller: emailController,
                 ),
@@ -108,7 +98,12 @@ class LoginScreen extends StatelessWidget {
                       ),
                       elevation: 4,
                     ),
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => const MainScreen()),
+                      );
+                    },
                     child: const Text('Entrar', style: TextStyle(fontSize: 16, color: Colors.white)),
                   ),
                 ),

@@ -58,7 +58,6 @@ class VestibularScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
 
-              // --- SIMULADOS DISPONÍVEIS ---
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: const [
@@ -108,7 +107,6 @@ class VestibularScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
 
-              // --- HISTÓRICO RECENTE ---
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: const [
@@ -148,7 +146,6 @@ class VestibularScreen extends StatelessWidget {
               ),
               const SizedBox(height: 24),
 
-              // --- RECURSOS EXTRAS ---
               const Text(
                 'Recursos Extras',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
@@ -188,7 +185,6 @@ class VestibularScreen extends StatelessWidget {
     );
   }
 
-  // --- COMPONENTES PERSONALIZADOS ---
   static Widget _buildSimuladoCard({
     required String title,
     required String subtitle,
@@ -361,7 +357,6 @@ class VestibularScreen extends StatelessWidget {
   }
 }
 
-// --- WIDGET PARA O PROGRESSO ---
 class _ProgressInfo extends StatelessWidget {
   final String title;
   final String value;
