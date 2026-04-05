@@ -1,380 +1,370 @@
 import 'package:flutter/material.dart';
+import '../../quiz/quiz_page.dart';
+import '../../../../../core/models.dart';
+import '../../../../../services/question_bank.dart';
+import '../../../../../services/storage_service.dart';
 
-class VestibularScreen extends StatelessWidget {
+class VestibularScreen extends StatefulWidget {
   const VestibularScreen({super.key});
 
   @override
+  State<VestibularScreen> createState() => _VestibularScreenState();
+}
+
+class _VestibularScreenState extends State<VestibularScreen> {
+  int _streak = 0;
+  int _totalQuestions = 0;
+  int _correctAnswers = 0;
+  List<QuizResult> _results = [];
+  String _selectedFilter = 'Todos';
+
+  final List<Map<String, dynamic>> _simulados = [
+    {
+      'title': 'ENEM Completo 2024',
+      'subtitle': '180 questões • 5h30min',
+      'tags': ['Todas as matérias'],
+      'difficulty': 'Alta',
+      'subject': null,
+      'count': 10,
+    },
+    {
+      'title': 'Matemática - ENEM',
+      'subtitle': '45 questões • 1h30min',
+      'tags': ['Álgebra', 'Geometria', 'Estatística'],
+      'difficulty': 'Média',
+      'subject': 'Matemática',
+      'count': 8,
+    },
+    {
+      'title': 'Linguagens e Códigos',
+      'subtitle': '45 questões • 1h30min',
+      'tags': ['Português', 'Literatura'],
+      'difficulty': 'Média',
+      'subject': 'Português',
+      'count': 8,
+    },
+    {
+      'title': 'Ciências da Natureza',
+      'subtitle': '45 questões • 1h30min',
+      'tags': ['Biologia', 'Química', 'Física'],
+      'difficulty': 'Alta',
+      'subject': 'Ciências',
+      'count': 8,
+    },
+    {
+      'title': 'Ciências Humanas',
+      'subtitle': '45 questões • 1h30min',
+      'tags': ['História', 'Geografia'],
+      'difficulty': 'Média',
+      'subject': 'História',
+      'count': 6,
+    },
+    {
+      'title': 'Física',
+      'subtitle': '20 questões • 40min',
+      'tags': ['Mecânica', 'Óptica'],
+      'difficulty': 'Alta',
+      'subject': 'Física',
+      'count': 1,
+    },
+    {
+      'title': 'Química',
+      'subtitle': '20 questões • 40min',
+      'tags': ['Geral', 'Orgânica'],
+      'difficulty': 'Média',
+      'subject': 'Química',
+      'count': 2,
+    },
+    {
+      'title': 'Biologia',
+      'subtitle': '20 questões • 40min',
+      'tags': ['Ecologia', 'Citologia'],
+      'difficulty': 'Média',
+      'subject': 'Biologia',
+      'count': 1,
+    },
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      _streak = StorageService.getStreak();
+      _totalQuestions = StorageService.totalQuestions;
+      _results = StorageService.getQuizResults();
+      _correctAnswers = _results.fold<int>(0, (p, r) => p + r.correctAnswers);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final filtered = _selectedFilter == 'Todos'
+        ? _simulados
+        : _simulados.where((s) => s['tags'].contains(_selectedFilter)).toList();
+
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back, size: 28),
-                onPressed: () => Navigator.pop(context), // 👈 volta pra anterior
-              ),
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
+        child: CustomScrollView(
+          slivers: [
+            // Header
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Seu Progresso',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Continue estudando!',
-                      style: TextStyle(color: Colors.white70, fontSize: 14),
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back),
+                          onPressed: () => Navigator.pop(context),
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: const Color(0xFF7C3AED),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Text(
+                          'ENEM & Vestibulares',
+                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: const [
-                        _ProgressInfo(title: 'Acertos', value: '87%'),
-                        _ProgressInfo(title: 'Simulados', value: '24'),
-                        _ProgressInfo(title: 'Estudadas', value: '156h'),
-                      ],
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF7C3AED), Color(0xFF8B5CF6)],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _stat('Acertos', '$_correctAnswers', Colors.white.withValues(alpha: 0.9)),
+                          Container(width: 1, height: 40, color: Colors.white.withValues(alpha: 0.3)),
+                          _stat('Questões', '$_totalQuestions', Colors.white.withValues(alpha: 0.9)),
+                          Container(width: 1, height: 40, color: Colors.white.withValues(alpha: 0.3)),
+                          _stat('Sequência', '${_streak} dias', Colors.white.withValues(alpha: 0.9)),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+            ),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text(
-                    'Simulados Disponíveis',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    'Ver todos',
-                    style: TextStyle(
-                      color: Color(0xFF6366F1),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _buildSimuladoCard(
-                title: 'ENEM 2023',
-                subtitle: '180 questões • 3h30min • Dificuldade: Alta',
-                tags: ['Matemática', 'Português'],
-                statusColor: Colors.grey,
-                statusText: 'Não iniciado',
-                actionText: 'Iniciar',
-                actionColor: Colors.blue,
-              ),
-              const SizedBox(height: 12),
-              _buildSimuladoCard(
-                title: 'Ciências da Natureza',
-                subtitle: '45 questões • 1h30min',
-                tags: ['Biologia', 'Química'],
-                statusColor: Colors.orange,
-                statusText: 'Em andamento',
-                progress: 0.67,
-                actionText: 'Continuar',
-                actionColor: Colors.orange,
-              ),
-              const SizedBox(height: 12),
-              _buildSimuladoCard(
-                title: 'Linguagens e Códigos',
-                subtitle: '45 questões • Concluído',
-                tags: ['Literatura', 'Redação'],
-                statusColor: Colors.green,
-                statusText: '92% de acertos',
-                actionText: 'Revisar',
-                actionColor: Colors.green,
-              ),
-              const SizedBox(height: 24),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: const [
-                  Text(
-                    'Histórico Recente',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    'Ver histórico completo',
-                    style: TextStyle(
-                      color: Color(0xFF6366F1),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _buildHistoricoItem(
-                title: 'Matemática Básica',
-                date: 'Ontem às 14:30',
-                percent: 95,
-                result: '38/40',
-              ),
-              const SizedBox(height: 8),
-              _buildHistoricoItem(
-                title: 'História do Brasil',
-                date: '2 dias atrás',
-                percent: 78,
-                result: '23/30',
-              ),
-              const SizedBox(height: 8),
-              _buildHistoricoItem(
-                title: 'Física Moderna',
-                date: '3 dias atrás',
-                percent: 65,
-                result: '13/20',
-              ),
-              const SizedBox(height: 24),
-
-              const Text(
-                'Recursos Extras',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _buildExtraCard(
-                    icon: Icons.tips_and_updates,
-                    title: 'Dicas de Estudo',
-                    subtitle: 'Estratégias e técnicas',
-                    action: 'Acessar',
-                  ),
-                  _buildExtraCard(
-                    icon: Icons.insert_chart_outlined,
-                    title: 'Relatórios',
-                    subtitle: 'Análise detalhada',
-                    action: 'Ver mais',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Center(
-                child: _buildExtraCard(
-                  icon: Icons.calendar_today,
-                  title: 'Cronograma',
-                  subtitle: 'Organize seus estudos',
-                  action: 'Criar',
-                  width: double.infinity,
+            // Filter chips
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: 40,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  children: ['Todos', 'Matemática', 'Português', 'Ciências', 'História', 'Física']
+                      .map((tag) => Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: _FilterChip(
+                              label: tag,
+                              selected: _selectedFilter == tag,
+                              onTap: () => setState(() => _selectedFilter = tag),
+                            ),
+                          ))
+                      .toList(),
                 ),
               ),
-            ],
-          ),
+            ),
+
+            // Simulados list
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final sim = filtered[index];
+                  final subject = sim['subject'] as String?;
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                    child: _SimuladoCard(
+                      title: sim['title'] as String,
+                      subtitle: sim['subtitle'] as String,
+                      tags: (sim['tags'] as List).cast<String>(),
+                      difficulty: sim['difficulty'] as String,
+                      subject: subject,
+                      questionCount: sim['count'] as int,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => QuizPage(
+                              title: sim['title'] as String,
+                              subject: subject,
+                              questionCount: sim['count'] as int,
+                            ),
+                          ),
+                        ).then((_) => _loadData());
+                      },
+                    ),
+                  );
+                },
+                childCount: filtered.length,
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 30)),
+          ],
         ),
       ),
     );
   }
 
-  static Widget _buildSimuladoCard({
-    required String title,
-    required String subtitle,
-    required List<String> tags,
-    required Color statusColor,
-    required String statusText,
-    required String actionText,
-    required Color actionColor,
-    double? progress,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title,
-              style:
-                  const TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
-          const SizedBox(height: 4),
-          Text(subtitle, style: const TextStyle(color: Colors.black54)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 6,
-            children: tags
-                .map((tag) => Chip(
-                      label: Text(tag,
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.black87)),
-                      backgroundColor: Colors.grey.shade200,
-                      padding: const EdgeInsets.symmetric(horizontal: 6),
-                    ))
-                .toList(),
-          ),
-          if (progress != null) ...[
-            const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 6,
-                backgroundColor: Colors.grey.shade200,
-                valueColor: AlwaysStoppedAnimation<Color>(statusColor),
-              ),
+  Widget _stat(String label, String value, Color textColor) {
+    return Column(
+      children: [
+        Text(value, style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+      ],
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _FilterChip({required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selected ? const Color(0xFF7C3AED) : Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected ? Colors.white : Colors.grey,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
             ),
-          ],
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(statusText,
-                  style: TextStyle(
-                      color: statusColor, fontWeight: FontWeight.w600)),
-              Text(
-                actionText,
-                style: TextStyle(
-                  color: actionColor,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  static Widget _buildHistoricoItem({
-    required String title,
-    required String date,
-    required int percent,
-    required String result,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w600, fontSize: 15)),
-              const SizedBox(height: 4),
-              Text(date,
-                  style:
-                      const TextStyle(color: Colors.black54, fontSize: 13)),
-            ],
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text('$percent%',
-                  style: TextStyle(
-                      color: percent >= 75 ? Colors.green : Colors.orange,
-                      fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              Text(result,
-                  style: const TextStyle(color: Colors.black54, fontSize: 13)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  static Widget _buildExtraCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required String action,
-    double? width,
-  }) {
-    return Container(
-      width: width ?? 160,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black12,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: const Color(0xFF6366F1), size: 28),
-          const SizedBox(height: 8),
-          Text(title,
-              style:
-                  const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-          const SizedBox(height: 4),
-          Text(subtitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.black54, fontSize: 13)),
-          const SizedBox(height: 8),
-          Text(
-            action,
-            style: const TextStyle(
-                color: Color(0xFF6366F1), fontWeight: FontWeight.w600),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _ProgressInfo extends StatelessWidget {
+class _SimuladoCard extends StatelessWidget {
   final String title;
-  final String value;
+  final String subtitle;
+  final List<String> tags;
+  final String difficulty;
+  final String? subject;
+  final int questionCount;
+  final VoidCallback onTap;
 
-  const _ProgressInfo({required this.title, required this.value});
+  const _SimuladoCard({
+    required this.title,
+    required this.subtitle,
+    required this.tags,
+    required this.difficulty,
+    this.subject,
+    required this.questionCount,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(value,
-            style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 18)),
-        const SizedBox(height: 4),
-        Text(title, style: const TextStyle(color: Colors.white70)),
-      ],
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.grey.shade100),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF7C3AED).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.quiz_outlined, color: Color(0xFF7C3AED), size: 22),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 4),
+                        Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.play_arrow, color: Color(0xFF7C3AED), size: 28),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: tags
+                    .map((t) => Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(t, style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                        ))
+                    .toList(),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: difficulty == 'Alta' ? Colors.red.shade50 : Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      difficulty,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: difficulty == 'Alta' ? Colors.red : Colors.orange,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  Text('$questionCount questões disponíveis',
+                      style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

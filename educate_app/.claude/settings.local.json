@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter analyze:*)",
+      "Bash(flutter pub:*)",
+      "Bash(sed -i 's/0xFF16A34A/0xFF7C3AED/g' features/auth/view/pages/login_page.dart features/auth/view/pages/register_screen.dart features/pages/home/pages/home_page.dart features/pages/study/study_page.dart features/pages/profile/profile_page.dart features/pages/progress/progress_page.dart features/pages/timer_page.dart features/pages/flashcards/flashcards_page.dart features/pages/quiz/quiz_page.dart features/pages/settings/settings_page.dart features/pages/schedule/schedule_page.dart config/app_colors.dart)",
+      "Bash(sed -i 's/0xFF22C55E/0xFF8B5CF6/g' features/auth/view/pages/login_page.dart features/auth/view/pages/register_screen.dart)",
+      "Bash(sed -i 's/0xFF00B97E/0xFF7C3AED/g' services/storage_service.dart)",
+      "Bash(sed -i 's/0xFF00B97E/0xFF7C3AED/g' features/auth/view/pages/custom_field.dart features/auth/view/widgets/custom_field.dart features/pages/home/pages/custom_field.dart)",
+      "Bash(sed -i 's/Color\\(0xFF22C55E\\)/0xFF8B5CF6/g' features/pages/home/pages/home_page.dart features/pages/quiz/quiz_page.dart)",
+      "Bash(sed -i 's/const Color\\(0xFF22C55E\\)/0xFF8B5CF6/g' features/pages/study/study_page.dart)",
+      "Bash(sed -i '1,1d;2,2d' features/pages/quiz/quiz_page.dart)",
+      "Bash(sed -i '/^import.*package:supabase_flutter/a\\\\class Placebo {}' features/auth/view/pages/register_screen.dart)"
+    ]
+  }
+}

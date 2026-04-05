@@ -1,309 +1,404 @@
 import 'package:flutter/material.dart';
+import '../settings/settings_page.dart';
+import '../../auth/view/pages/login_page.dart';
+import '../../../../services/auth_service.dart';
+import '../../../../services/cloud_storage_service.dart';
+import '../../../../services/storage_service.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text('Meu Perfil', style: TextStyle(color: Colors.black)),
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        actions: const [
-          Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: Icon(Icons.settings, color: Colors.black),
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  Map<String, dynamic>? _profile;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      _profile = await AuthService.getUserProfile();
+    } catch (_) {
+      // Profile might not exist yet
+      _profile = {
+        'name': StorageService.getUserName() ?? 'Usuário',
+        'email': StorageService.getUserEmail() ?? '',
+        'xp': 0, 'streak': 0, 'total_quizzes': 0, 'total_questions': 0, 'study_minutes': 0,
+        'objective': 'ENEM',
+      };
+    }
+    setState(() => _loading = false);
+  }
+
+  String _getLevel(int xp) {
+    if (xp >= 1000) return 'Gênio';
+    if (xp >= 600) return 'Mestre';
+    if (xp >= 300) return 'Dedicado';
+    if (xp >= 100) return 'Estudante';
+    return 'Iniciante';
+  }
+
+  int _nextLevel(int xp) {
+    if (xp < 100) return 100;
+    if (xp < 300) return 300;
+    if (xp < 600) return 600;
+    if (xp < 1000) return 1000;
+    return 1500;
+  }
+
+  Future<void> _logout() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Sair da conta'),
+        content: const Text('Tem certeza que deseja sair?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Sair', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 6,
-                    offset: const Offset(0, 3),
-                  )
-                ],
-              ),
-              padding: const EdgeInsets.all(20),
-              child: Row(
-                children: [
-                  const CircleAvatar(
-                    radius: 32,
-                    backgroundColor: Color(0xFFEEF2FF),
-                    child: Icon(Icons.person, size: 40, color: Color(0xFF4F46E5)),
+    );
+    if (ok == true) {
+      await AuthService.signOut();
+      if (!mounted) return;
+      Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
+    }
+  }
+
+  Future<void> _deleteAccount() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Excluir conta'),
+        content: const Text('Essa ação é irreversível! Todos os seus dados, progresso e configurações serão perdidos permanentemente.\n\nDeseja continuar?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancelar')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Excluir', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      try {
+        await AuthService.deleteAccount();
+        if (!mounted) return;
+        Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao excluir conta: $e'), backgroundColor: Colors.red, behavior: SnackBarBehavior.floating),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator(color: Color(0xFF7C3AED))),
+      );
+    }
+
+    final name = _profile?['name'] ?? 'Usuário';
+    final email = _profile?['email'] ?? '';
+    final xp = (_profile?['xp'] ?? 0) as int;
+    final streak = (_profile?['streak'] ?? 0) as int;
+    final quizzes = (_profile?['total_quizzes'] ?? 0) as int;
+    final questions = (_profile?['total_questions'] ?? 0) as int;
+    final minutes = (_profile?['study_minutes'] ?? 0) as int;
+    final objective = (_profile?['objective'] ?? 'ENEM') as String;
+    final level = _getLevel(xp);
+    final nextLvl = _nextLevel(xp);
+    final progress = (xp / nextLvl).clamp(0.0, 1.0);
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF9FAFB),
+      body: SafeArea(
+        child: CustomScrollView(
+          slivers: [
+            // Gradient header
+            SliverToBoxAdapter(
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF7C3AED), Color(0xFF8B5CF6)],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          'Thomas David',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                  borderRadius: BorderRadius.only(bottomLeft: Radius.circular(32), bottomRight: Radius.circular(32)),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()))
+                                .then((_) => _loadProfile());
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.settings, color: Colors.white, size: 22),
                           ),
-                        ),
-                        SizedBox(height: 4),
-                        Text(
-                          'zuleika244@gmail.com',
-                          style: TextStyle(color: Colors.grey),
                         ),
                       ],
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 12),
+                    // Avatar
+                    CircleAvatar(
+                      radius: 42,
+                      backgroundColor: Colors.white.withValues(alpha: 0.25),
+                      child: CircleAvatar(
+                        radius: 38,
+                        backgroundColor: Colors.white,
+                        child: Text(
+                          name.isNotEmpty ? name[0].toUpperCase() : 'U',
+                          style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(name, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                    Text(email, style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '$level • $objective',
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    // XP Bar
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('$xp XP', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            Text('Próximo: $nextLvl XP', style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: LinearProgressIndicator(
+                            value: progress,
+                            minHeight: 8,
+                            backgroundColor: Colors.white.withValues(alpha: 0.2),
+                            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-            const SizedBox(height: 20),
 
-            // Estatísticas rápidas
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            // Stats
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    _statCard(Icons.local_fire_department, '$streak', 'Sequência'),
+                    _statCard(Icons.quiz_outlined, '$quizzes', 'Simulados'),
+                    _statCard(Icons.description_outlined, '$questions', 'Questões'),
+                    _statCard(Icons.schedule_outlined, '${minutes}min', 'Estudo'),
+                  ],
+                ),
+              ),
+            ),
+
+            // Menu items
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                    _menuItem(Icons.person_outline, 'Editar perfil', () {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage())).then((_) => _loadProfile());
+                    }),
+                    _menuItem(Icons.flag_outlined, 'Objetivo: $objective', null),
+                    _menuItem(Icons.card_travel_outlined, 'Ranking', () {
+                      _showLeaderboard(context);
+                    }),
+                    _menuItem(Icons.help_outline, 'FAQ / Suporte', null),
+                    _menuItem(Icons.privacy_tip_outlined, 'Política de Privacidade', null),
+                  ],
+                ),
+              ),
+            ),
+
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Column(
+                  children: [
+                    _menuItem(Icons.logout, 'Sair da conta', _logout, color: Colors.red),
+                    _menuItem(Icons.delete_outline, 'Excluir conta', _deleteAccount, color: Colors.red),
+                  ],
+                ),
+              ),
+            ),
+
+            SliverToBoxAdapter(
+              child: Container(
+                height: 80,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _statCard(IconData icon, String value, String label) {
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: const Color(0xFF7C3AED), size: 22),
+            const SizedBox(height: 6),
+            Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(label, style: const TextStyle(color: Colors.grey, fontSize: 10)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _menuItem(IconData icon, String title, VoidCallback? onTap, {Color? color}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+            child: Row(
               children: [
-                _buildStat('127', 'Dias de Estudo'),
-                _buildStat('89%', 'Taxa de Acerto'),
-                _buildStat('45', 'Simulados'),
+                Icon(icon, color: color ?? const Color(0xFF7C3AED), size: 22),
+                const SizedBox(width: 14),
+                Expanded(child: Text(title, style: TextStyle(fontSize: 15, color: color ?? const Color(0xFF111827)))),
+                if (onTap != null) Icon(Icons.arrow_forward_ios, size: 16, color: color ?? Colors.grey),
               ],
             ),
-            const SizedBox(height: 20),
+          ),
+        ),
+      ),
+    );
+  }
 
-            // Progresso Geral
-            _buildSectionCard(
-              title: 'Progresso Geral',
+  Future<void> _showLeaderboard(BuildContext context) async {
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => FutureBuilder<List<Map<String, dynamic>>>(
+        future: CloudStorageService.getLeaderboard(),
+        builder: (ctx, snap) {
+          if (!snap.hasData) return const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(color: Color(0xFF7C3AED))));
+          final users = snap.data!;
+          return DraggableScrollableSheet(
+            initialChildSize: 0.6,
+            maxChildSize: 0.9,
+            expand: false,
+            builder: (_, controller) => SingleChildScrollView(
+              controller: controller,
+              padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Center(
+                    child: Container(
+                      width: 40, height: 4,
+                      decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(4)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Ranking Global', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      _progressBox('2.847', 'Questões Certas', Color(0xFFE8F5E9)),
-                      _progressBox('358', 'Questões Erradas', Color(0xFFFFEBEE), isError: true),
-                    ],
-                  )
+                  ...users.asMap().entries.map<Widget>((entry) {
+                    final i = entry.key;
+                    final u = entry.value;
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: i == 0 ? const Color(0xFF7C3AED).withValues(alpha: 0.08) : const Color(0xFFF9FAFB),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 32, height: 32,
+                            decoration: BoxDecoration(
+                              color: i < 3 ? const Color(0xFF7C3AED) : Colors.grey[200],
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${i + 1}',
+                                style: TextStyle(
+                                  color: i < 3 ? Colors.white : Colors.grey[600],
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(child: Text(u['name'] ?? 'Anônimo', style: const TextStyle(fontWeight: FontWeight.w600))),
+                          Text('${u['xp']} XP', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF7C3AED))),
+                        ],
+                      ),
+                    );
+                  }).toList(),
                 ],
               ),
             ),
-
-            const SizedBox(height: 20),
-
-            // Simulados Recentes
-            _buildSectionCard(
-              title: 'Simulados Recentes',
-              trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-              child: Column(
-                children: [
-                  _simuladoItem('ENEM 2023 - Matemática', 'Há 2 dias', '92%', Colors.green),
-                  const Divider(),
-                  _simuladoItem('Linguagens e Códigos', 'Há 5 dias', '76%', Colors.orange),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Matérias
-            _buildSectionCard(
-              title: 'Matérias',
-              trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-              child: Column(
-                children: [
-                  _subjectRow('Matemática', 0.89, Colors.green),
-                  _subjectRow('Português', 0.76, Colors.orange),
-                  _subjectRow('História', 0.84, Colors.lightBlue),
-                  _subjectRow('Ciências', 0.68, Colors.red),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Conquistas
-            _buildSectionCard(
-              title: 'Conquistas',
-              trailing: const Icon(Icons.emoji_events, color: Colors.amber),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  _achievement('Sequência', '30 dias', Icons.local_fire_department, Colors.orange),
-                  _achievement('100 Simulados', '', Icons.check_circle, Colors.blue),
-                  _achievement('Nota Máxima', '', Icons.star, Colors.green),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            // Botões
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF4F46E5),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                onPressed: () {},
-                child: const Text('Ver Relatório Completo', style: TextStyle(color: Colors.white)),
-              ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                icon: const Icon(Icons.share_outlined, color: Colors.black),
-                label: const Text('Compartilhar Progresso', style: TextStyle(color: Colors.black)),
-                onPressed: () {},
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  side: const BorderSide(color: Colors.grey),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
-    );
-  }
-
-  // Componentes reutilizáveis
-  static Widget _buildStat(String value, String label) {
-    return Column(
-      children: [
-        Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-        Text(label, style: const TextStyle(color: Colors.grey)),
-      ],
-    );
-  }
-
-  static Widget _buildSectionCard({required String title, Widget? trailing, required Widget child}) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              if (trailing != null) trailing,
-            ],
-          ),
-          const SizedBox(height: 12),
-          child,
-        ],
-      ),
-    );
-  }
-
-  static Widget _progressBox(String value, String label, Color bg, {bool isError = false}) {
-    return Container(
-      width: 150,
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              color: isError ? Colors.red : Colors.green,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
-          ),
-          Text(label, style: const TextStyle(color: Colors.grey)),
-        ],
-      ),
-    );
-  }
-
-  static Widget _simuladoItem(String title, String date, String percent, Color color) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-            Text(date, style: const TextStyle(color: Colors.grey)),
-          ],
-        ),
-        Text(percent, style: TextStyle(color: color, fontWeight: FontWeight.bold)),
-      ],
-    );
-  }
-
-  static Widget _subjectRow(String name, double progress, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
-              Text('${(progress * 100).toInt()}%', style: TextStyle(color: color)),
-            ],
-          ),
-          const SizedBox(height: 6),
-          LinearProgressIndicator(
-            value: progress,
-            color: color,
-            backgroundColor: Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(8),
-          ),
-        ],
-      ),
-    );
-  }
-
-  static Widget _achievement(String title, String subtitle, IconData icon, Color color) {
-    return Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
-          child: Icon(icon, color: color, size: 24),
-        ),
-        const SizedBox(height: 8),
-        Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        if (subtitle.isNotEmpty)
-          Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-      ],
     );
   }
 }

@@ -1,7 +1,8 @@
-import 'package:educate_app/features/pages/home/pages/home_page.dart';
-import 'package:educate_app/features/pages/profile/profile_page.dart';
-import 'package:educate_app/features/pages/study/study_page.dart';
 import 'package:flutter/material.dart';
+import '../pages/progress/progress_page.dart';
+import 'home/pages/home_page.dart';
+import 'study/study_page.dart';
+import 'profile/profile_page.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -13,32 +14,34 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectIndex = 0;
 
-  final List<Widget> _pages = const [
+  List<Widget> get _pages => const [
     HomePage(),
     StudyPage(),
-    ProfilePage()
+    ProgressPage(),
+    ProfilePage(),
   ];
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectIndex = index;
-    });
+    setState(() => _selectIndex = index);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _pages[_selectIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectIndex,
-        onTap: _onItemTapped,
-        selectedItemColor: const Color(0xFF16A34A),
-        unselectedItemColor: Colors.grey,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Início'),
-          BottomNavigationBarItem(icon: Icon(Icons.school), label: 'Estudar'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
+      body: IndexedStack(
+        index: _selectIndex,
+        children: _pages,
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectIndex,
+        onDestinationSelected: _onItemTapped,
+        backgroundColor: Colors.white,
+        indicatorColor: const Color(0xFF7C3AED).withOpacity(0.12),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home), label: 'Início'),
+          NavigationDestination(icon: Icon(Icons.school_outlined), selectedIcon: Icon(Icons.school), label: 'Estudar'),
+          NavigationDestination(icon: Icon(Icons.bar_chart_outlined), selectedIcon: Icon(Icons.bar_chart), label: 'Progresso'),
+          NavigationDestination(icon: Icon(Icons.person_outline), selectedIcon: Icon(Icons.person), label: 'Perfil'),
         ],
       ),
     );
