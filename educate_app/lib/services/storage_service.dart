@@ -13,11 +13,61 @@ class StorageService {
   static const _userNameKey = 'user_name';
   static const _userEmailKey = 'user_email';
   static const _flashcardProgressKey = 'flashcard_progress';
+  static const _goalMinutesKey = 'goal_minutes';
+  static const _goalQuestionsKey = 'goal_questions';
+  static const _todayKey = 'today_date';
+  static const _todayQuestionsKey = 'today_questions';
+  static const _todayMinutesKey = 'today_minutes';
+  static const _masteredCardsKey = 'mastered_cards';
 
   static late SharedPreferences _prefs;
 
   static Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
+  }
+
+  // ---- Metas diárias ----
+  static int getGoalMinutes() => _prefs.getInt(_goalMinutesKey) ?? 60;
+  static Future<void> setGoalMinutes(int v) => _prefs.setInt(_goalMinutesKey, v);
+
+  static int getGoalQuestions() => _prefs.getInt(_goalQuestionsKey) ?? 20;
+  static Future<void> setGoalQuestions(int v) => _prefs.setInt(_goalQuestionsKey, v);
+
+  static String _todayStr() {
+    final t = DateTime.now();
+    return '${t.year}-${t.month}-${t.day}';
+  }
+
+  /// Zera os contadores do dia se a última atividade foi em outro dia.
+  static void _rolloverIfNeeded() {
+    if (_prefs.getString(_todayKey) != _todayStr()) {
+      _prefs.setString(_todayKey, _todayStr());
+      _prefs.setInt(_todayQuestionsKey, 0);
+      _prefs.setInt(_todayMinutesKey, 0);
+    }
+  }
+
+  static int getTodayQuestions() {
+    _rolloverIfNeeded();
+    return _prefs.getInt(_todayQuestionsKey) ?? 0;
+  }
+
+  static int getTodayMinutes() {
+    _rolloverIfNeeded();
+    return _prefs.getInt(_todayMinutesKey) ?? 0;
+  }
+
+  // ---- Flashcards dominados (persistência local) ----
+  static List<String> getMasteredCards() => _prefs.getStringList(_masteredCardsKey) ?? [];
+
+  static Future<void> setCardMastered(String id, bool mastered) async {
+    final set = getMasteredCards().toSet();
+    if (mastered) {
+      set.add(id);
+    } else {
+      set.remove(id);
+    }
+    await _prefs.setStringList(_masteredCardsKey, set.toList());
   }
 
   static String? getUserName() => _prefs.getString(_userNameKey);
@@ -50,6 +100,8 @@ class StorageService {
 
   static Future<void> addQuestionsAnswered(int count) async {
     await _prefs.setInt(_totalQuestionsKey, (_prefs.getInt(_totalQuestionsKey) ?? 0) + count);
+    _rolloverIfNeeded();
+    await _prefs.setInt(_todayQuestionsKey, (_prefs.getInt(_todayQuestionsKey) ?? 0) + count);
     await recordStudyDay();
   }
 
@@ -57,6 +109,8 @@ class StorageService {
 
   static Future<void> addStudyMinutes(int minutes) async {
     await _prefs.setInt(_studyMinutesKey, (_prefs.getInt(_studyMinutesKey) ?? 0) + minutes);
+    _rolloverIfNeeded();
+    await _prefs.setInt(_todayMinutesKey, (_prefs.getInt(_todayMinutesKey) ?? 0) + minutes);
     await recordStudyDay();
   }
 
@@ -90,6 +144,9 @@ class StorageService {
     })).toList();
     await _prefs.setStringList(_quizResultsKey, encoded);
     await addQuestionsAnswered(result.totalQuestions);
+    if (result.timeSpentSeconds >= 60) {
+      await addStudyMinutes(result.timeSpentSeconds ~/ 60);
+    }
   }
 
   static String? getSelectedSubject() => _prefs.getString(_selectedSubjectKey);

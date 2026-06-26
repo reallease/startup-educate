@@ -215,5 +215,192 @@ class QuestionBank {
       correctIndex: 0,
       explanation: 'O Art. 1° da CF prevê os fundamentos da República: soberania, cidadania, dignidade da pessoa humana, valores sociais do trabalho e pluralismo político.',
     ),
+
+    // ===== MATEMÁTICA (extras) =====
+    Question(
+      id: 'm5', subject: 'Matemática', category: 'ENEM',
+      question: 'Um produto de R\$ 200,00 sofre dois aumentos sucessivos de 10%. Qual o preço final?',
+      options: ['R\$ 220,00', 'R\$ 240,00', 'R\$ 242,00', 'R\$ 244,00', 'R\$ 250,00'],
+      correctIndex: 2,
+      explanation: '200 × 1,1 = 220; 220 × 1,1 = 242. Aumentos sucessivos se multiplicam, não se somam.',
+    ),
+    Question(
+      id: 'm6', subject: 'Matemática', category: 'ENEM',
+      question: 'Qual é a média aritmética dos números 4, 8, 10 e 6?',
+      options: ['6', '7', '7,5', '8', '28'],
+      correctIndex: 1,
+      explanation: '(4 + 8 + 10 + 6) / 4 = 28 / 4 = 7.',
+    ),
+    Question(
+      id: 'm7', subject: 'Matemática', category: 'ENEM',
+      question: 'Em uma PA de razão 3 e primeiro termo 2, qual é o 5º termo?',
+      options: ['11', '12', '14', '15', '17'],
+      correctIndex: 2,
+      explanation: 'aₙ = a₁ + (n-1)·r = 2 + 4·3 = 14.',
+    ),
+    Question(
+      id: 'm8', subject: 'Matemática', category: 'ENEM',
+      question: 'Quanto é 30% de 250?',
+      options: ['55', '65', '70', '75', '80'],
+      correctIndex: 3,
+      explanation: '0,30 × 250 = 75.',
+    ),
+    Question(
+      id: 'm9', subject: 'Matemática', category: 'ENEM',
+      question: 'Qual o valor de 2³ + 3²?',
+      options: ['12', '15', '17', '18', '25'],
+      correctIndex: 2,
+      explanation: '2³ = 8 e 3² = 9, logo 8 + 9 = 17.',
+    ),
+
+    // ===== PORTUGUÊS (extras) =====
+    Question(
+      id: 'p4', subject: 'Português', category: 'ENEM',
+      question: 'A figura de linguagem em "Chorei rios de lágrimas" é:',
+      options: ['Metáfora', 'Hipérbole', 'Metonímia', 'Ironia', 'Eufemismo'],
+      correctIndex: 1,
+      explanation: 'Hipérbole é o exagero proposital para dar ênfase.',
+    ),
+    Question(
+      id: 'p5', subject: 'Português', category: 'ENEM',
+      question: 'Assinale a frase com crase correta:',
+      options: ['Vou a escola.', 'Refiro-me à você.', 'Cheguei às 8 horas.', 'Ele foi à pé.', 'Dei o livro à ele.'],
+      correctIndex: 2,
+      explanation: 'Usa-se crase antes de horas determinadas femininas: "às 8 horas".',
+    ),
+    Question(
+      id: 'p6', subject: 'Português', category: 'ENEM',
+      question: 'O plural de "cidadão" é:',
+      options: ['Cidadões', 'Cidadãos', 'Cidadães', 'Cidadans', 'Cidadões'],
+      correctIndex: 1,
+      explanation: 'O plural correto de "cidadão" é "cidadãos".',
+    ),
+    Question(
+      id: 'p7', subject: 'Português', category: 'ENEM',
+      question: 'Em "Comprei livros, cadernos e canetas", a vírgula separa:',
+      options: ['Orações', 'Aposto', 'Vocativo', 'Elementos de uma enumeração', 'Adjunto adverbial'],
+      correctIndex: 3,
+      explanation: 'A vírgula separa itens de uma mesma série (enumeração).',
+    ),
+
+    // ===== HISTÓRIA (extras) =====
+    Question(
+      id: 'h3', subject: 'História', category: 'ENEM',
+      question: 'O Brasil foi "descoberto" pelos portugueses no ano de:',
+      options: ['1492', '1500', '1502', '1512', '1530'],
+      correctIndex: 1,
+      explanation: 'A esquadra de Pedro Álvares Cabral chegou ao Brasil em 22 de abril de 1500.',
+    ),
+    Question(
+      id: 'h4', subject: 'História', category: 'ENEM',
+      question: 'A Era Vargas teve início em qual ano?',
+      options: ['1922', '1930', '1937', '1945', '1964'],
+      correctIndex: 1,
+      explanation: 'Getúlio Vargas assumiu o poder em 1930, após a Revolução de 1930.',
+    ),
+    Question(
+      id: 'h5', subject: 'História', category: 'ENEM',
+      question: 'A Segunda Guerra Mundial terminou em:',
+      options: ['1918', '1939', '1942', '1945', '1950'],
+      correctIndex: 3,
+      explanation: 'A Segunda Guerra Mundial terminou em 1945, com a rendição do Japão.',
+    ),
+
+    // ===== GEOGRAFIA (extras) =====
+    Question(
+      id: 'g3', subject: 'Geografia', category: 'ENEM',
+      question: 'Qual é a capital do Brasil?',
+      options: ['Rio de Janeiro', 'São Paulo', 'Brasília', 'Salvador', 'Belo Horizonte'],
+      correctIndex: 2,
+      explanation: 'Brasília é a capital federal desde 1960.',
+    ),
+    Question(
+      id: 'g4', subject: 'Geografia', category: 'ENEM',
+      question: 'O processo de saída da população do campo para as cidades chama-se:',
+      options: ['Êxodo rural', 'Migração pendular', 'Nomadismo', 'Urbanização forçada', 'Transumância'],
+      correctIndex: 0,
+      explanation: 'Êxodo rural é a migração do campo para a cidade.',
+    ),
+    Question(
+      id: 'g5', subject: 'Geografia', category: 'ENEM',
+      question: 'A linha imaginária que divide a Terra em hemisférios Norte e Sul é:',
+      options: ['Meridiano de Greenwich', 'Trópico de Câncer', 'Linha do Equador', 'Trópico de Capricórnio', 'Círculo Polar'],
+      correctIndex: 2,
+      explanation: 'A Linha do Equador divide a Terra nos hemisférios Norte e Sul.',
+    ),
+
+    // ===== FÍSICA / QUÍMICA / BIOLOGIA (extras) =====
+    Question(
+      id: 'f2', subject: 'Física', category: 'ENEM',
+      question: 'A unidade de medida de força no Sistema Internacional é:',
+      options: ['Joule', 'Watt', 'Newton', 'Pascal', 'Volt'],
+      correctIndex: 2,
+      explanation: 'A força é medida em Newton (N) no SI.',
+    ),
+    Question(
+      id: 'q3', subject: 'Química', category: 'ENEM',
+      question: 'A água é formada por quais elementos?',
+      options: ['Hidrogênio e Carbono', 'Hidrogênio e Oxigênio', 'Oxigênio e Nitrogênio', 'Carbono e Oxigênio', 'Hidrogênio e Hélio'],
+      correctIndex: 1,
+      explanation: 'A água (H₂O) é formada por hidrogênio e oxigênio.',
+    ),
+    Question(
+      id: 'b2', subject: 'Biologia', category: 'ENEM',
+      question: 'O processo pelo qual as plantas produzem seu alimento é:',
+      options: ['Respiração', 'Fotossíntese', 'Digestão', 'Fermentação', 'Transpiração'],
+      correctIndex: 1,
+      explanation: 'A fotossíntese converte luz, CO₂ e água em glicose e oxigênio.',
+    ),
+    Question(
+      id: 'b3', subject: 'Biologia', category: 'ENEM',
+      question: 'Qual estrutura celular contém o material genético (DNA)?',
+      options: ['Mitocôndria', 'Ribossomo', 'Núcleo', 'Lisossomo', 'Vacúolo'],
+      correctIndex: 2,
+      explanation: 'O núcleo armazena o DNA nas células eucariontes.',
+    ),
+
+    // ===== INFORMÁTICA / DIREITO / RACIOCÍNIO (Concursos) =====
+    Question(
+      id: 'i3', subject: 'Informática', category: 'Concurso',
+      question: 'No Windows, o atalho Ctrl + C serve para:',
+      options: ['Colar', 'Copiar', 'Recortar', 'Desfazer', 'Salvar'],
+      correctIndex: 1,
+      explanation: 'Ctrl + C copia o conteúdo selecionado para a área de transferência.',
+    ),
+    Question(
+      id: 'i4', subject: 'Informática', category: 'Concurso',
+      question: 'Qual destes é um navegador de internet?',
+      options: ['Excel', 'Photoshop', 'Google Chrome', 'Windows Defender', 'PowerPoint'],
+      correctIndex: 2,
+      explanation: 'O Google Chrome é um navegador (browser) de internet.',
+    ),
+    Question(
+      id: 'rl1', subject: 'Raciocínio Lógico', category: 'Concurso',
+      question: 'Se todo A é B, e todo B é C, então:',
+      options: ['Todo C é A', 'Todo A é C', 'Nenhum A é C', 'Algum C não é A', 'Nada se conclui'],
+      correctIndex: 1,
+      explanation: 'Por transitividade: se A⊂B e B⊂C, então A⊂C (todo A é C).',
+    ),
+    Question(
+      id: 'rl2', subject: 'Raciocínio Lógico', category: 'Concurso',
+      question: 'Qual o próximo número da sequência: 2, 4, 8, 16, ...?',
+      options: ['18', '24', '30', '32', '64'],
+      correctIndex: 3,
+      explanation: 'Cada termo é o dobro do anterior: 16 × 2 = 32.',
+    ),
+    Question(
+      id: 'd2', subject: 'Direito', category: 'Concurso',
+      question: 'Os direitos e garantias fundamentais estão previstos principalmente em qual artigo da CF/88?',
+      options: ['Art. 1º', 'Art. 5º', 'Art. 37', 'Art. 100', 'Art. 226'],
+      correctIndex: 1,
+      explanation: 'O Art. 5º da CF/88 trata dos direitos e deveres individuais e coletivos.',
+    ),
+    Question(
+      id: 'd3', subject: 'Direito', category: 'Concurso',
+      question: 'Qual princípio da Administração Pública exige que o agente público aja conforme a lei?',
+      options: ['Eficiência', 'Moralidade', 'Legalidade', 'Publicidade', 'Impessoalidade'],
+      correctIndex: 2,
+      explanation: 'Pelo princípio da legalidade, o administrador só pode fazer o que a lei autoriza.',
+    ),
   ];
 }

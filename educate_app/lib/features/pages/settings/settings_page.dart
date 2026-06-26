@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../core/br_states.dart';
+import '../../../../services/auth_service.dart';
 import '../../../../services/storage_service.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -11,8 +13,9 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  String? _state;
   int _dailyGoalMinutes = 60;
-  int _dailyGoalQuestions = 30;
+  int _dailyGoalQuestions = 20;
   bool _notifications = true;
 
   @override
@@ -20,15 +23,42 @@ class _SettingsPageState extends State<SettingsPage> {
     super.initState();
     _nameController.text = StorageService.getUserName() ?? '';
     _emailController.text = StorageService.getUserEmail() ?? '';
+    _dailyGoalMinutes = StorageService.getGoalMinutes();
+    _dailyGoalQuestions = StorageService.getGoalQuestions();
+    _loadCloudProfile();
+  }
+
+  Future<void> _loadCloudProfile() async {
+    try {
+      final profile = await AuthService.getUserProfile();
+      final state = profile?['state'] as String?;
+      if (mounted && state != null) setState(() => _state = state);
+    } catch (_) {}
   }
 
   Future<void> _saveProfile() async {
     await StorageService.setUserName(_nameController.text.trim());
     await StorageService.setUserEmail(_emailController.text.trim());
+    try {
+      await AuthService.updateProfile({
+        'name': _nameController.text.trim(),
+        'state': _state,
+      });
+    } catch (_) {
+      // Offline ou sem sessão: mantém apenas o salvamento local
+    }
+    await StorageService.setGoalMinutes(_dailyGoalMinutes);
+    await StorageService.setGoalQuestions(_dailyGoalQuestions);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Perfil atualizado!')),
+        SnackBar(
+          content: const Text('Configurações salvas!'),
+          backgroundColor: const Color(0xFF16A34A),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
       );
+      Navigator.maybePop(context);
     }
   }
 
@@ -62,6 +92,23 @@ class _SettingsPageState extends State<SettingsPage> {
                   TextField(
                     controller: _emailController,
                     decoration: const InputDecoration(labelText: 'E-mail', border: OutlineInputBorder()),
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    key: ValueKey(_state),
+                    initialValue: _state,
+                    isExpanded: true,
+                    hint: const Text('Estado (UF)'),
+                    decoration: const InputDecoration(
+                      labelText: 'Estado',
+                      border: OutlineInputBorder(),
+                      prefixIcon: Icon(Icons.location_on_outlined, color: Color(0xFF7C3AED)),
+                    ),
+                    items: BrStates.all.entries
+                        .map((e) => DropdownMenuItem(
+                            value: e.key, child: Text('${e.key} — ${e.value}')))
+                        .toList(),
+                    onChanged: (v) => setState(() => _state = v),
                   ),
                 ],
               ),

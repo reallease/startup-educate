@@ -1,6 +1,9 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
+import '../../../../core/design.dart';
 import '../../../../core/models.dart';
+import '../../../../services/storage_service.dart';
 
 class FlashcardsPage extends StatefulWidget {
   const FlashcardsPage({super.key});
@@ -9,13 +12,11 @@ class FlashcardsPage extends StatefulWidget {
   State<FlashcardsPage> createState() => _FlashcardsPageState();
 }
 
-class _FlashcardsPageState extends State<FlashcardsPage> {
+class _FlashcardsPageState extends State<FlashcardsPage> with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
-  bool _isFlipped = false;
   String? _selectedSubject;
-
-  List<Flashcard> _masterCards = [];
-  List<Flashcard>? _unmastered;
+  late final AnimationController _flipCtrl;
+  Set<String> _mastered = {};
 
   final List<Flashcard> _allFlashcards = [
     // Matemática
@@ -42,6 +43,19 @@ class _FlashcardsPageState extends State<FlashcardsPage> {
     Flashcard(id: 'f16', subject: 'História', front: 'Proclamação da República', back: '15 de novembro de 1889, liderada pelo Marechal Deodoro da Fonseca.'),
   ];
 
+  @override
+  void initState() {
+    super.initState();
+    _flipCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 380));
+    _mastered = StorageService.getMasteredCards().toSet();
+  }
+
+  @override
+  void dispose() {
+    _flipCtrl.dispose();
+    super.dispose();
+  }
+
   List<Flashcard> get _filteredCards {
     if (_selectedSubject == null) return _allFlashcards;
     return _allFlashcards.where((c) => c.subject == _selectedSubject).toList();
@@ -49,74 +63,97 @@ class _FlashcardsPageState extends State<FlashcardsPage> {
 
   List<String> get _subjects => _allFlashcards.map((c) => c.subject).toSet().toList();
 
-  void _flip() => setState(() => _isFlipped = !_isFlipped);
-
-  void _initCards() {
-    _unmastered = List.from(_allFlashcards);
-  }
-
-  void _nextCard() {
-    if (_currentIndex < _filteredCards.length - 1) {
-      setState(() {
-        _currentIndex++;
-        _isFlipped = false;
-      });
+  void _flip() {
+    if (_flipCtrl.isAnimating) return;
+    if (_flipCtrl.value == 0) {
+      _flipCtrl.forward();
+    } else {
+      _flipCtrl.reverse();
     }
   }
 
-  void _prevCard() {
-    if (_currentIndex > 0) {
-      setState(() {
-        _currentIndex--;
-        _isFlipped = false;
-      });
-    }
+  void _go(int delta) {
+    final cards = _filteredCards;
+    final next = (_currentIndex + delta).clamp(0, cards.length - 1);
+    if (next == _currentIndex) return;
+    _flipCtrl.reset();
+    setState(() => _currentIndex = next);
   }
 
-  void _markMastered() {
-    if (_currentIndex < _filteredCards.length) {
-      setState(() {
-        _masterCards.add(_filteredCards[_currentIndex]);
-        _filteredCards.removeAt(_currentIndex);
-        if (_currentIndex >= _filteredCards.length && _currentIndex > 0) {
-          _currentIndex--;
-        }
-        _isFlipped = false;
-      });
+  void _toggleMastered(Flashcard card) {
+    final isMastered = _mastered.contains(card.id);
+    setState(() {
+      if (isMastered) {
+        _mastered.remove(card.id);
+      } else {
+        _mastered.add(card.id);
+      }
+    });
+    StorageService.setCardMastered(card.id, !isMastered);
+    if (!isMastered) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Card marcado como dominado! 🎯'),
+          backgroundColor: AppColor.success,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(milliseconds: 1100),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      if (_currentIndex < _filteredCards.length - 1) {
+        Future.delayed(const Duration(milliseconds: 250), () {
+          if (mounted) _go(1);
+        });
+      }
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _initCards();
   }
 
   @override
   Widget build(BuildContext context) {
     final cards = _filteredCards;
-    final card = cards.isNotEmpty ? cards[_currentIndex.clamp(0, cards.length - 1)] : null;
+    final safeIndex = cards.isEmpty ? 0 : _currentIndex.clamp(0, cards.length - 1);
+    final card = cards.isEmpty ? null : cards[safeIndex];
+    final masteredCount = _allFlashcards.where((c) => _mastered.contains(c.id)).length;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: AppColor.bg,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text('Flashcards'),
         centerTitle: true,
-        actions: [
-          if (_masterCards.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: Icon(Icons.check_circle, color: Colors.green),
-            ),
-        ],
       ),
       body: Column(
         children: [
-          // Subject filter
+          // Progresso geral
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('$masteredCount de ${_allFlashcards.length} dominados', style: AppText.label),
+                    Text('${(masteredCount / _allFlashcards.length * 100).round()}%',
+                        style: AppText.label.copyWith(color: AppColor.primary, fontWeight: FontWeight.w700)),
+                  ],
+                ),
+                AppGap.sm,
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: masteredCount / _allFlashcards.length,
+                    minHeight: 7,
+                    backgroundColor: AppColor.line,
+                    valueColor: const AlwaysStoppedAnimation(AppColor.primary),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Filtro de matérias
           SizedBox(
-            height: 40,
+            height: 38,
             child: ListView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -126,96 +163,72 @@ class _FlashcardsPageState extends State<FlashcardsPage> {
               ],
             ),
           ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.only(left: 20, right: 20, bottom: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  '${_masterCards.length}/$_allFlashcards dominados',
-                  style: const TextStyle(color: Colors.grey, fontSize: 13),
-                ),
-                if (card != null)
-                  Text(
-                    '${_currentIndex + 1}/${cards.length}',
-                    style: const TextStyle(color: Colors.grey, fontSize: 13),
-                  ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-          // Flashcard
+          // Card
           Expanded(
-            child: cards.isEmpty
-                ? const Center(
-                    child: Text(
-                      'Parabéns! Você dominou todos os flashcards!',
-                      style: TextStyle(fontSize: 18, color: Colors.green),
-                    ),
-                  )
-                : GestureDetector(
-                    onTap: _flip,
+            child: card == null
+                ? const Center(child: Text('Nenhum card nesta matéria.', style: AppText.label))
+                : Center(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        child: _isFlipped ? _buildCardBack(card!) : _buildCardFront(card!),
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      child: GestureDetector(
+                        onTap: _flip,
+                        child: AnimatedBuilder(
+                          animation: _flipCtrl,
+                          builder: (context, _) {
+                            final angle = _flipCtrl.value * math.pi;
+                            final showBack = angle > math.pi / 2;
+                            return Transform(
+                              alignment: Alignment.center,
+                              transform: Matrix4.identity()
+                                ..setEntry(3, 2, 0.0012)
+                                ..rotateY(angle),
+                              child: showBack
+                                  ? Transform(
+                                      alignment: Alignment.center,
+                                      transform: Matrix4.identity()..rotateY(math.pi),
+                                      child: _cardBack(card),
+                                    )
+                                  : _cardFront(card, _mastered.contains(card.id)),
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ),
           ),
-          if (cards.isNotEmpty) ...[
+          // Posição + navegação
+          if (card != null) ...[
+            Text('${safeIndex + 1} / ${cards.length}', style: AppText.caption),
             Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
               child: Row(
                 children: [
+                  _circleBtn(Icons.arrow_back_rounded, safeIndex > 0 ? () => _go(-1) : null),
+                  AppGap.md,
                   Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _prevCard,
-                      icon: const Icon(Icons.arrow_back),
-                      label: const Text('Anterior'),
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: SizedBox(
+                      height: 54,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _toggleMastered(card),
+                        icon: Icon(_mastered.contains(card.id) ? Icons.check_circle : Icons.check_circle_outline),
+                        label: Text(_mastered.contains(card.id) ? 'Dominado' : 'Dominei'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _mastered.contains(card.id) ? AppColor.success : AppColor.primary,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _markMastered,
-                      icon: const Icon(Icons.check),
-                      label: const Text('Dominei'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF7C3AED),
-                        minimumSize: const Size.fromHeight(48),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _nextCard,
-                      icon: const Icon(Icons.arrow_forward),
-                      label: const Text('Próximo'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6366F1),
-                        minimumSize: const Size.fromHeight(48),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ),
+                  AppGap.md,
+                  _circleBtn(Icons.arrow_forward_rounded, safeIndex < cards.length - 1 ? () => _go(1) : null),
                 ],
               ),
             ),
             const Padding(
-              padding: EdgeInsets.only(bottom: 10),
-              child: Text(
-                'Toque no card para ver a resposta',
-                style: TextStyle(color: Colors.grey, fontSize: 12),
-              ),
+              padding: EdgeInsets.only(bottom: 12),
+              child: Text('Toque no card para virar', style: AppText.caption),
             ),
           ],
         ],
@@ -223,74 +236,85 @@ class _FlashcardsPageState extends State<FlashcardsPage> {
     );
   }
 
-  Widget _buildCardFront(Flashcard card) {
-    return Container(
-      key: const ValueKey('front'),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 4)),
-        ],
-        border: Border.all(color: const Color(0xFF7C3AED).withOpacity(0.3), width: 2),
+  Widget _circleBtn(IconData icon, VoidCallback? onTap) {
+    final enabled = onTap != null;
+    return Material(
+      color: enabled ? AppColor.surface : AppColor.line,
+      shape: const CircleBorder(),
+      elevation: enabled ? 1 : 0,
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Icon(icon, color: enabled ? AppColor.primary : AppColor.inkFaint),
+        ),
       ),
-      padding: const EdgeInsets.all(30),
+    );
+  }
+
+  Widget _cardFront(Flashcard card, bool mastered) {
+    return Container(
+      width: double.infinity,
+      constraints: const BoxConstraints(minHeight: 320),
+      decoration: BoxDecoration(
+        color: AppColor.surface,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: AppShadow.soft,
+        border: Border.all(color: AppColor.line),
+      ),
+      padding: const EdgeInsets.all(28),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF7C3AED).withOpacity(0.1),
+                  color: AppColor.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text(
-                  card.subject,
-                  style: const TextStyle(color: Color(0xFF7C3AED), fontWeight: FontWeight.w600),
-                ),
+                child: Text(card.subject, style: const TextStyle(color: AppColor.primary, fontWeight: FontWeight.w700, fontSize: 12)),
               ),
+              if (mastered) const Icon(Icons.verified_rounded, color: AppColor.success, size: 22),
             ],
           ),
-          const SizedBox(height: 20),
-          const Icon(Icons.touch_app, color: Colors.grey, size: 32),
-          const SizedBox(height: 12),
-          Text(
-            card.front,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          const Spacer(),
+          Text(card.front, textAlign: TextAlign.center, style: const TextStyle(fontSize: 23, fontWeight: FontWeight.w700, height: 1.3)),
+          const Spacer(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.touch_app_outlined, color: AppColor.inkFaint, size: 18),
+              AppGap.w(6),
+              const Text('Ver resposta', style: AppText.caption),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCardBack(Flashcard card) {
+  Widget _cardBack(Flashcard card) {
     return Container(
-      key: const ValueKey('back'),
+      width: double.infinity,
+      constraints: const BoxConstraints(minHeight: 320),
       decoration: BoxDecoration(
-        color: const Color(0xFF7C3AED),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 10, offset: const Offset(0, 4)),
-        ],
+        gradient: AppColor.primaryGradient,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: AppShadow.tinted(AppColor.primary),
       ),
-      padding: const EdgeInsets.all(30),
+      padding: const EdgeInsets.all(28),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Text(
-            'Resposta',
-            style: TextStyle(color: Colors.white70, fontSize: 14),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            card.back,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w600),
-          ),
+          const Text('RESPOSTA', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1.5)),
+          const Spacer(),
+          Text(card.back, textAlign: TextAlign.center, style: const TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w600, height: 1.4)),
+          const Spacer(),
+          const Text('Toque para voltar', style: TextStyle(color: Colors.white60, fontSize: 11)),
         ],
       ),
     );
@@ -300,28 +324,26 @@ class _FlashcardsPageState extends State<FlashcardsPage> {
     final selected = _selectedSubject == subject;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
-      child: InkWell(
-        onTap: () {
-          setState(() {
-            _selectedSubject = subject;
-            _currentIndex = 0;
-            _isFlipped = false;
-          });
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: selected ? const Color(0xFF7C3AED) : Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: selected ? const Color(0xFF7C3AED) : Colors.grey.shade300),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              color: selected ? Colors.white : Colors.grey,
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
+      child: Material(
+        color: selected ? AppColor.primary : AppColor.surface,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            _flipCtrl.reset();
+            setState(() {
+              _selectedSubject = subject;
+              _currentIndex = 0;
+            });
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: selected ? AppColor.primary : AppColor.line),
             ),
+            child: Text(label,
+                style: TextStyle(color: selected ? Colors.white : AppColor.inkSoft, fontWeight: FontWeight.w600, fontSize: 13)),
           ),
         ),
       ),

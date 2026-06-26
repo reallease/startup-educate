@@ -24,6 +24,7 @@ class AuthService {
     required String password,
     required String name,
     String? objective,
+    String? state,
   }) async {
     final response = await _supabase.auth.signUp(
       email: email.trim(),
@@ -31,6 +32,7 @@ class AuthService {
       data: {
         'name': name.trim(),
         'objective': objective ?? 'ENEM',
+        'state': state,
       },
     );
 
@@ -42,6 +44,7 @@ class AuthService {
           'name': name.trim(),
           'email': email.trim(),
           'objective': objective ?? 'ENEM',
+          'state': state,
           'xp': 0,
           'streak': 1,
           'total_quizzes': 0,
@@ -61,6 +64,7 @@ class AuthService {
               'name': name.trim(),
               'email': email.trim(),
               'objective': objective ?? 'ENEM',
+              'state': state,
               'xp': 0,
               'streak': 1,
               'total_quizzes': 0,

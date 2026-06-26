@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+
+import '../../../core/design.dart';
 import '../../../services/storage_service.dart';
 
 class PomodoroPage extends StatefulWidget {
@@ -10,44 +13,56 @@ class PomodoroPage extends StatefulWidget {
 }
 
 class _PomodoroPageState extends State<PomodoroPage> {
+  static const _workMinutes = 25;
+  static const _breakMinutes = 5;
+  static const _longBreak = 15;
+
   bool _isRunning = false;
   bool _isBreak = false;
-  int _secondsRemaining = 25 * 60;
+  int _secondsRemaining = _workMinutes * 60;
   int _pomodorosCompleted = 0;
   Timer? _timer;
 
-  final int _workMinutes = 25;
-  final int _breakMinutes = 5;
-  final int _longBreak = 15;
+  int get _phaseTotal => (_isBreak
+          ? (_pomodorosCompleted % 4 == 0 && _pomodorosCompleted > 0 ? _longBreak : _breakMinutes)
+          : _workMinutes) *
+      60;
 
   String get _timeFormatted {
-    final min = _secondsRemaining ~/ 60;
-    final sec = _secondsRemaining % 60;
-    return '${min.toString().padLeft(2, '0')}:${sec.toString().padLeft(2, '0')}';
+    final m = _secondsRemaining ~/ 60;
+    final s = _secondsRemaining % 60;
+    return '${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
   void _start() {
     setState(() => _isRunning = true);
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      setState(() {
-        if (_secondsRemaining > 0) {
-          _secondsRemaining--;
-        } else {
-          _timer?.cancel();
-          if (!_isBreak) {
-            _pomodorosCompleted++;
-            _isBreak = true;
-            _secondsRemaining =
-                _pomodorosCompleted % 4 == 0 ? _longBreak * 60 : _breakMinutes * 60;
-            _start(); // auto start break
-          } else {
-            _isBreak = false;
-            _secondsRemaining = _workMinutes * 60;
-            _isRunning = false;
-          }
-        }
-      });
+      if (_secondsRemaining > 0) {
+        setState(() => _secondsRemaining--);
+      } else {
+        _onPhaseComplete();
+      }
     });
+  }
+
+  void _onPhaseComplete() {
+    _timer?.cancel();
+    if (!_isBreak) {
+      _pomodorosCompleted++;
+      StorageService.addStudyMinutes(_workMinutes);
+      setState(() {
+        _isBreak = true;
+        _secondsRemaining = (_pomodorosCompleted % 4 == 0 ? _longBreak : _breakMinutes) * 60;
+      });
+      _start();
+    } else {
+      setState(() {
+        _isBreak = false;
+        _secondsRemaining = _workMinutes * 60;
+        _isRunning = false;
+      });
+    }
   }
 
   void _pause() {
@@ -64,143 +79,109 @@ class _PomodoroPageState extends State<PomodoroPage> {
     });
   }
 
-  void _skipBreak() {
-    if (_isBreaking) {
-      _timer?.cancel();
+  void _skip() {
+    _timer?.cancel();
+    setState(() {
       _isBreak = false;
       _secondsRemaining = _workMinutes * 60;
-      setState(() => _isRunning = false);
-    }
+      _isRunning = false;
+    });
   }
-
-  bool get _isBreaking => _isBreak;
 
   @override
   void dispose() {
     _timer?.cancel();
-    if (_pomodorosCompleted > 0) {
-      final minutes = _pomodorosCompleted * _workMinutes;
-      StorageService.addStudyMinutes(minutes);
-    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final accent = _isBreak ? AppColor.success : AppColor.primary;
+    final progress = _phaseTotal > 0 ? _secondsRemaining / _phaseTotal : 0.0;
+
     return Scaffold(
-      backgroundColor: _isBreak ? const Color(0xFFECFDF5) : const Color(0xFFF9FAFB),
+      backgroundColor: AppColor.bg,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: const Text('Cronômetro Pomodoro'),
+        centerTitle: true,
+      ),
       body: SafeArea(
         child: Column(
           children: [
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  // Phase indicator
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: _isBreak ? const Color(0xFF7C3AED) : const Color(0xFF6366F1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      _isBreak ? '☕ Intervalo' : '📖 Estudo',
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  const SizedBox(height: 30),
-                  // Timer circle
-                  SizedBox(
-                    width: 220, height: 220,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        SizedBox(
-                          width: 220,
-                          height: 220,
-                          child: CircularProgressIndicator(
-                            value: _secondsRemaining /
-                                (_isBreak ? _breakMinutes * 60 : _workMinutes * 60),
-                            strokeWidth: 8,
-                            backgroundColor: Colors.grey.shade200,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              _isBreak ? Colors.green : const Color(0xFF6366F1),
-                            ),
-                          ),
-                        ),
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              _timeFormatted,
-                              style: const TextStyle(
-                                fontSize: 56,
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'monospace',
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _isBreak ? 'Pausa' : 'Foco no estudo',
-                              style: const TextStyle(color: Colors.grey, fontSize: 16),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-                  // Controls
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        onPressed: _reset,
-                        icon: const Icon(Icons.replay, size: 32, color: Colors.grey),
-                      ),
-                      const SizedBox(width: 30),
-                      ElevatedButton(
-                        onPressed: _isRunning ? _pause : _start,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _isBreak ? const Color(0xFF7C3AED) : const Color(0xFF6366F1),
-                          minimumSize: const Size(100, 60),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(_isRunning ? Icons.pause : Icons.play_arrow,
-                                color: Colors.white, size: 30),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 30),
-                      IconButton(
-                        onPressed: _isBreak ? _skipBreak : null,
-                        icon: const Icon(Icons.skip_next, size: 32, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                ],
+            const Spacer(flex: 1),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+              ),
+              child: Text(
+                _isBreak ? '☕ Hora do intervalo' : '📖 Foco no estudo',
+                style: TextStyle(color: accent, fontWeight: FontWeight.w700),
               ),
             ),
-            const Spacer(),
-            // Stats at bottom
+            const Spacer(flex: 1),
+            SizedBox(
+              width: 260,
+              height: 260,
+              child: CustomPaint(
+                painter: _TimerRingPainter(progress: progress, color: accent),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(_timeFormatted, style: const TextStyle(fontSize: 58, fontWeight: FontWeight.w800, color: AppColor.ink, letterSpacing: -1)),
+                      Text(_isBreak ? 'Relaxe um pouco' : 'Mantenha o foco', style: AppText.label),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const Spacer(flex: 1),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _secondaryBtn(Icons.refresh_rounded, 'Reiniciar', _reset),
+                AppGap.w(24),
+                GestureDetector(
+                  onTap: _isRunning ? _pause : _start,
+                  child: Container(
+                    width: 84,
+                    height: 84,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: _isBreak ? [AppColor.success, const Color(0xFF22C55E)] : [AppColor.primary, AppColor.accent],
+                      ),
+                      shape: BoxShape.circle,
+                      boxShadow: AppShadow.tinted(accent),
+                    ),
+                    child: Icon(_isRunning ? Icons.pause_rounded : Icons.play_arrow_rounded, color: Colors.white, size: 44),
+                  ),
+                ),
+                AppGap.w(24),
+                _secondaryBtn(Icons.skip_next_rounded, 'Pular', _isBreak ? _skip : null),
+              ],
+            ),
+            const Spacer(flex: 2),
             Container(
-              padding: const EdgeInsets.all(20),
+              width: double.infinity,
+              margin: const EdgeInsets.all(16),
+              padding: const EdgeInsets.symmetric(vertical: 20),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8),
-                ],
+                color: AppColor.surface,
+                borderRadius: BorderRadius.circular(AppRadius.card),
+                boxShadow: AppShadow.soft,
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _statPomo(_pomodorosCompleted, 'Pomodoros'),
-                  _statPomo(_pomodorosCompleted * _workMinutes ~/ 60, 'Horas de estudo'),
-                  _statPomo(_pomodorosCompleted * _workMinutes, 'Min. estudados'),
+                  _stat('$_pomodorosCompleted', 'Pomodoros'),
+                  _divider(),
+                  _stat('${_pomodorosCompleted * _workMinutes}', 'Minutos'),
+                  _divider(),
+                  _stat('${(_pomodorosCompleted / 4 * 100).round().clamp(0, 100)}%', 'Ciclo'),
                 ],
               ),
             ),
@@ -210,16 +191,74 @@ class _PomodoroPageState extends State<PomodoroPage> {
     );
   }
 
-  Widget _statPomo(int value, String label) {
+  Widget _divider() => Container(width: 1, height: 34, color: AppColor.line);
+
+  Widget _stat(String value, String label) {
     return Column(
       children: [
-        Text(
-          '$value',
-          style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF6366F1)),
-        ),
-        const SizedBox(height: 4),
-        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+        Text(value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColor.primary)),
+        AppGap.xs,
+        Text(label, style: AppText.caption),
       ],
     );
   }
+
+  Widget _secondaryBtn(IconData icon, String label, VoidCallback? onTap) {
+    final enabled = onTap != null;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Material(
+          color: AppColor.surface,
+          shape: const CircleBorder(),
+          elevation: enabled ? 1 : 0,
+          child: InkWell(
+            onTap: onTap,
+            customBorder: const CircleBorder(),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Icon(icon, color: enabled ? AppColor.inkSoft : AppColor.inkFaint, size: 26),
+            ),
+          ),
+        ),
+        AppGap.xs,
+        Text(label, style: AppText.caption),
+      ],
+    );
+  }
+}
+
+class _TimerRingPainter extends CustomPainter {
+  final double progress;
+  final Color color;
+  _TimerRingPainter({required this.progress, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 12;
+    final bg = Paint()
+      ..color = AppColor.line
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 14
+      ..strokeCap = StrokeCap.round;
+    final fg = Paint()
+      ..shader = SweepGradient(
+        colors: [color, color.withValues(alpha: 0.6)],
+      ).createShader(Rect.fromCircle(center: center, radius: radius))
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 14
+      ..strokeCap = StrokeCap.round;
+    canvas.drawCircle(center, radius, bg);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2,
+      2 * math.pi * progress.clamp(0.0, 1.0),
+      false,
+      fg,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_TimerRingPainter old) => old.progress != progress || old.color != color;
 }

@@ -1,11 +1,11 @@
 import '../core/models.dart';
 
 class Gamification {
-  static const _xpPerCorrect = 10;
-  static const _xpPerStreakDay = 5;
+  static const xpPerCorrect = 10;
+  static const xpPerStreakDay = 5;
 
   static int calculateXP({required int correctAnswers, required int streakDays}) {
-    return (correctAnswers * _xpPerCorrect) + (streakDays * _xpPerStreakDay);
+    return (correctAnswers * xpPerCorrect) + (streakDays * xpPerStreakDay);
   }
 
   static List<Achievement> getAchievements({

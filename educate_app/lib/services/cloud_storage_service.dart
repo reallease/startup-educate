@@ -5,6 +5,48 @@ class CloudStorageService {
   static final _supabase = Supabase.instance.client;
   static String? get _uid => AuthService.userId;
 
+  /// Sincroniza um simulado concluído com o Supabase em uma só leva:
+  /// salva o resultado e atualiza os contadores do perfil
+  /// (total_quizzes, total_questions, xp, study_minutes, streak),
+  /// além de registrar o dia de estudo.
+  static Future<void> syncQuizCompletion({
+    required String title,
+    required int totalQuestions,
+    required int correctAnswers,
+    required int timeSpentSeconds,
+    required List<bool> answers,
+    required int streak,
+    required int xpEarned,
+  }) async {
+    final uid = _uid;
+    if (uid == null) return;
+
+    await _supabase.from('quiz_results').insert({
+      'user_id': uid,
+      'title': title,
+      'total_questions': totalQuestions,
+      'correct_answers': correctAnswers,
+      'time_spent_seconds': timeSpentSeconds,
+      'answers': answers,
+    });
+
+    final data = await _supabase
+        .from('profiles')
+        .select('total_quizzes, total_questions, xp, study_minutes')
+        .eq('id', uid)
+        .single();
+
+    await _supabase.from('profiles').update({
+      'total_quizzes': ((data['total_quizzes'] as int?) ?? 0) + 1,
+      'total_questions': ((data['total_questions'] as int?) ?? 0) + totalQuestions,
+      'xp': ((data['xp'] as int?) ?? 0) + xpEarned,
+      'study_minutes': ((data['study_minutes'] as int?) ?? 0) + (timeSpentSeconds ~/ 60),
+      'streak': streak,
+    }).eq('id', uid);
+
+    await logStudyDay();
+  }
+
   static Future<void> saveQuizResult({
     required String title,
     required int totalQuestions,
@@ -126,12 +168,14 @@ class CloudStorageService {
     await _supabase.from('profiles').update({'study_minutes': current + minutes}).eq('id', uid);
   }
 
-  static Future<List<Map<String, dynamic>>> getLeaderboard({int limit = 20}) async {
-    final response = await _supabase
-        .from('profiles')
-        .select('name, xp, streak, total_quizzes, total_questions')
-        .order('xp', ascending: false)
-        .limit(limit);
+  /// Ranking global ou por estado (UF). Usa a função SQL `get_leaderboard`
+  /// (security definer), que enxerga todos os perfis mesmo com RLS ativa.
+  static Future<List<Map<String, dynamic>>> getLeaderboard({int limit = 20, String? state}) async {
+    final response = await _supabase.rpc('get_leaderboard', params: {
+      'page_size': limit,
+      'page_offset': 0,
+      'state_filter': state,
+    });
     return (response as List).cast<Map<String, dynamic>>();
   }
 }

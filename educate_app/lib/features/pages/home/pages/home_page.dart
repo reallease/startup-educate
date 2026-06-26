@@ -1,8 +1,16 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import '../../../auth/view/pages/login_page.dart';
-import '../../quiz/quiz_page.dart';
-import '../../../../services/storage_service.dart';
+
+import '../../../../core/design.dart';
 import '../../../../core/gamification.dart';
+import '../../../../services/auth_service.dart';
+import '../../../../services/storage_service.dart';
+import '../../../auth/view/pages/login_page.dart';
+import '../../../pages/schedule/schedule_page.dart';
+import '../../../pages/timer_page.dart';
+import '../../quiz/quiz_page.dart';
+import '../../flashcards/flashcards_page.dart';
+import '../../profile/achievements_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -17,7 +25,11 @@ class _HomePageState extends State<HomePage> {
   int _totalQuestions = 0;
   double _accuracy = 0;
   int _xp = 0;
-  String _level = '';
+
+  int _todayQuestions = 0;
+  int _todayMinutes = 0;
+  int _goalQuestions = 20;
+  int _goalMinutes = 60;
 
   @override
   void initState() {
@@ -32,18 +44,11 @@ class _HomePageState extends State<HomePage> {
     final results = StorageService.getQuizResults();
 
     double accuracy = 0;
-    if (results.isNotEmpty) {
-      final totalCorrect = results.fold<int>(0, (prev, r) => prev + r.correctAnswers);
-      final totalAttempted = results.fold<int>(0, (prev, r) => prev + r.totalQuestions);
-      accuracy = totalAttempted > 0 ? totalCorrect / totalAttempted * 100 : 0;
-    }
+    final totalCorrect = results.fold<int>(0, (p, r) => p + r.correctAnswers);
+    final totalAttempted = results.fold<int>(0, (p, r) => p + r.totalQuestions);
+    if (totalAttempted > 0) accuracy = totalCorrect / totalAttempted * 100;
 
-    final xp = Gamification.calculateXP(
-      correctAnswers: results.fold<int>(0, (prev, r) => prev + r.correctAnswers),
-      streakDays: streak,
-    );
-
-    final level = _getLevel(xp);
+    final xp = Gamification.calculateXP(correctAnswers: totalCorrect, streakDays: streak);
 
     if (mounted) {
       setState(() {
@@ -52,357 +57,377 @@ class _HomePageState extends State<HomePage> {
         _totalQuestions = totalQ;
         _accuracy = accuracy;
         _xp = xp;
-        _level = level;
+        _todayQuestions = StorageService.getTodayQuestions();
+        _todayMinutes = StorageService.getTodayMinutes();
+        _goalQuestions = StorageService.getGoalQuestions();
+        _goalMinutes = StorageService.getGoalMinutes();
       });
     }
   }
 
-  String _getLevel(int xp) {
-    if (xp >= 1000) return 'Gênio';
-    if (xp >= 600) return 'Mestre';
-    if (xp >= 300) return 'Dedicado';
-    if (xp >= 100) return 'Estudante';
-    return 'Iniciante';
+  String _greeting() {
+    final h = DateTime.now().hour;
+    if (h < 12) return 'Bom dia';
+    if (h < 18) return 'Boa tarde';
+    return 'Boa noite';
   }
 
-  String _greeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Bom dia';
-    if (hour < 18) return 'Boa tarde';
-    return 'Boa noite';
+  Future<void> _logout() async {
+    await AuthService.signOut();
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (_) => false,
+    );
+  }
+
+  void _open(Widget page) {
+    Navigator.push(context, fadeRoute(page)).then((_) => _loadData());
   }
 
   @override
   Widget build(BuildContext context) {
+    final firstName = _userName.split(' ').first;
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
-      body: PullToRefresh(
+      backgroundColor: AppColor.bg,
+      body: RefreshIndicator(
+        color: AppColor.primary,
         onRefresh: _loadData,
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+          children: [
+            SafeArea(bottom: false, child: _header(firstName)),
+            AppGap.xl,
+            _dailyGoalsCard(),
+            AppGap.lg,
+            _streakAndAccuracy(),
+            AppGap.xl,
+            const Text('Atalhos', style: AppText.section),
+            AppGap.md,
+            _quickActions(),
+            AppGap.xl,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Header with user info
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          '$_greeting(), $_userName!',
-                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '$_level • $_xp XP',
-                          style: const TextStyle(color: Color(0xFF6366F1), fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                    PopupMenuButton(
-                      icon: const Icon(Icons.more_vert),
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'settings',
-                          child: ListTile(leading: Icon(Icons.settings), title: Text('Configurações')),
-                        ),
-                        const PopupMenuItem(
-                          value: 'logout',
-                          child: ListTile(leading: Icon(Icons.logout, color: Colors.red), title: Text('Sair')),
-                        ),
-                      ],
-                      onSelected: (value) async {
-                        if (value == 'logout') {
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(builder: (context) => LoginScreen()),
-                            (route) => false,
-                          );
-                        }
-                      },
-                    ),
-                  ],
+                const Text('Atividade recente', style: AppText.section),
+                TextButton(
+                  onPressed: () => _open(const AchievementsPage()),
+                  child: const Text('Conquistas', style: TextStyle(color: AppColor.primary, fontWeight: FontWeight.w600)),
                 ),
-                const SizedBox(height: 20),
-
-                // Streak card
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF7C3AED), Color(0xFF8B5CF6)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Sequência de Estudos',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '$_streak dias consecutivos',
-                            style: const TextStyle(color: Colors.white70),
-                          ),
-                        ],
-                      ),
-                      const Icon(Icons.local_fire_department,
-                          color: Colors.white, size: 36),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Stats
-                Row(
-                  children: [
-                    _statCard('${_accuracy.toStringAsFixed(0)}%', 'Taxa Acerto'),
-                    _statCard('$_totalQuestions', 'Questões'),
-                    _statCard('$_streak', 'Sequência'),
-                  ],
-                ),
-                const SizedBox(height: 20),
-
-                // Quick actions
-                const Text(
-                  'Ações Rápidas',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    _quickAction(Icons.quiz, 'Simulado', const Color(0xFF6366F1), () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const QuizPage(
-                            title: 'Simulado Rápido',
-                            questionCount: 10,
-                          ),
-                        ),
-                      );
-                    }),
-                    _quickAction(Icons.timer, 'Cronômetro', const Color(0xFFFF6B35), () {
-                      // Would need to navigate but MainScreen has bottom nav
-                    }, tab: 2),
-                    _quickAction(Icons.style, 'Flashcards', const Color(0xFF8B5CF6), () {}, route: '/flashcards'),
-                  ],
-                ),
-                const SizedBox(height: 25),
-
-                // Featured subjects
-                const Text(
-                  'Matérias Disponíveis',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                const SizedBox(height: 10),
-                _subjectCard('Matemática', 12, Colors.blue, 'ENEM'),
-                const SizedBox(height: 10),
-                _subjectCard('Português', 8, Colors.purple, 'ENEM'),
-                const SizedBox(height: 10),
-                _subjectCard('História', 5, Colors.orange, 'ENEM'),
-                const SizedBox(height: 10),
-                _subjectCard('Ciências', 6, Colors.teal, 'ENEM'),
-                const SizedBox(height: 25),
-
-                // Recent activity
-                const Text(
-                  'Atividade Recente',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-                const SizedBox(height: 10),
-                _buildRecentActivity(),
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _statCard(String value, String label) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: const TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED)),
-            ),
-            const SizedBox(height: 4),
-            Text(label, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+            AppGap.sm,
+            _recentActivity(),
           ],
         ),
       ),
     );
   }
 
-  Widget _quickAction(IconData icon, String label, Color color, VoidCallback onTap, {int? tab, String? route}) {
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          padding: const EdgeInsets.all(14),
+  Widget _header(String firstName) {
+    return Row(
+      children: [
+        Container(
+          width: 52,
+          height: 52,
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade200),
+            gradient: AppColor.primaryGradient,
+            shape: BoxShape.circle,
+            boxShadow: AppShadow.tinted(AppColor.primary),
           ),
+          alignment: Alignment.center,
+          child: Text(
+            firstName.isNotEmpty ? firstName[0].toUpperCase() : 'E',
+            style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700),
+          ),
+        ),
+        AppGap.md,
+        Expanded(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: color, size: 28),
-              const SizedBox(height: 6),
-              Text(label, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+              Text('${_greeting()},', style: AppText.label),
+              Text(firstName, style: AppText.title, overflow: TextOverflow.ellipsis),
             ],
           ),
         ),
-      ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+          decoration: BoxDecoration(
+            color: AppColor.surface,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: AppShadow.soft,
+          ),
+          child: Row(
+            children: [
+              Text(LevelSystem.iconOf(_xp), style: const TextStyle(fontSize: 14)),
+              AppGap.w(6),
+              Text('$_xp XP', style: const TextStyle(fontWeight: FontWeight.w700, color: AppColor.primary, fontSize: 13)),
+            ],
+          ),
+        ),
+        PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert, color: AppColor.inkSoft),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          onSelected: (v) {
+            if (v == 'logout') _logout();
+          },
+          itemBuilder: (_) => const [
+            PopupMenuItem(value: 'logout', child: Row(children: [Icon(Icons.logout, color: AppColor.danger, size: 20), SizedBox(width: 10), Text('Sair')])),
+          ],
+        ),
+      ],
     );
   }
 
-  Widget _subjectCard(String name, int pending, Color color, String category) {
+  Widget _dailyGoalsCard() {
+    final qProgress = _goalQuestions > 0 ? (_todayQuestions / _goalQuestions).clamp(0.0, 1.0) : 0.0;
+    final mProgress = _goalMinutes > 0 ? (_todayMinutes / _goalMinutes).clamp(0.0, 1.0) : 0.0;
+    final overall = ((qProgress + mProgress) / 2);
+    final done = qProgress >= 1 && mProgress >= 1;
+
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        gradient: AppColor.primaryGradient,
+        borderRadius: BorderRadius.circular(AppRadius.card),
+        boxShadow: AppShadow.tinted(AppColor.primary),
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-            child: Icon(Icons.book, color: color),
-          ),
-          const SizedBox(width: 12),
+          _GoalRing(progress: overall),
+          AppGap.w(20),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                Text('$pending questões • $category',
-                    style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                const SizedBox(height: 6),
-                LinearProgressIndicator(
-                  value: 0.3,
-                  color: color,
-                  backgroundColor: Colors.grey.shade200,
+                Text(
+                  done ? 'Meta de hoje batida! 🎉' : 'Meta de hoje',
+                  style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700),
                 ),
+                AppGap.sm,
+                _goalLine(Icons.quiz_rounded, '$_todayQuestions de $_goalQuestions questões', qProgress),
+                AppGap.sm,
+                _goalLine(Icons.schedule_rounded, '$_todayMinutes de $_goalMinutes min de estudo', mProgress),
               ],
             ),
           ),
-          const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 16),
         ],
       ),
     );
   }
 
-  Widget _buildRecentActivity() {
-    final results = StorageService.getQuizResults();
-    if (results.isEmpty) {
-      return Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Center(
-          child: Column(
-            children: [
-              Icon(Icons.quiz, color: Colors.grey, size: 48),
-              SizedBox(height: 8),
-              Text('Nenhum simulado realizado ainda.', style: TextStyle(color: Colors.grey)),
-              SizedBox(height: 4),
-              Text('Comece um simulado agora!', style: TextStyle(color: Colors.grey, fontSize: 12)),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final recent = results.take(3).toList();
+  Widget _goalLine(IconData icon, String label, double progress) {
     return Column(
-      children: recent.map((r) {
-        final accuracy = r.accuracy;
-        final timeAgo = _timeAgo(r.date);
-        return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 15),
+            AppGap.w(6),
+            Text(label, style: const TextStyle(color: Colors.white, fontSize: 12.5, fontWeight: FontWeight.w500)),
+          ],
+        ),
+        AppGap.xs,
+        ClipRRect(
+          borderRadius: BorderRadius.circular(6),
+          child: LinearProgressIndicator(
+            value: progress,
+            minHeight: 5,
+            backgroundColor: Colors.white24,
+            valueColor: const AlwaysStoppedAnimation(Colors.white),
           ),
-          child: Row(
-            children: [
-              Icon(
-                accuracy >= 0.7 ? Icons.check_circle : Icons.star,
-                color: accuracy >= 0.7 ? const Color(0xFF7C3AED) : Colors.orange,
+        ),
+      ],
+    );
+  }
+
+  Widget _streakAndAccuracy() {
+    return Row(
+      children: [
+        Expanded(
+          child: AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  const Icon(Icons.local_fire_department_rounded, color: AppColor.streak, size: 22),
+                  AppGap.w(6),
+                  Text('$_streak', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
+                ]),
+                AppGap.xs,
+                const Text('dias de sequência', style: AppText.label),
+              ],
+            ),
+          ),
+        ),
+        AppGap.md,
+        Expanded(
+          child: AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  const Icon(Icons.track_changes_rounded, color: AppColor.primary, size: 22),
+                  AppGap.w(6),
+                  Text('${_accuracy.toStringAsFixed(0)}%', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800)),
+                ]),
+                AppGap.xs,
+                Text('acerto • $_totalQuestions questões', style: AppText.label, overflow: TextOverflow.ellipsis),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _quickActions() {
+    final items = [
+      (icon: Icons.bolt_rounded, label: 'Simulado', color: AppColor.primary, onTap: () => _open(const QuizPage(title: 'Simulado Rápido', questionCount: 10))),
+      (icon: Icons.timer_rounded, label: 'Cronômetro', color: AppColor.indigo, onTap: () => _open(const PomodoroPage())),
+      (icon: Icons.style_rounded, label: 'Flashcards', color: AppColor.accent, onTap: () => _open(const FlashcardsPage())),
+      (icon: Icons.calendar_month_rounded, label: 'Agenda', color: AppColor.streak, onTap: () => _open(const SchedulePage())),
+    ];
+    return Row(
+      children: items.map((it) {
+        return Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: AppCard(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              onTap: it.onTap,
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(color: it.color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)),
+                    child: Icon(it.icon, color: it.color, size: 24),
+                  ),
+                  AppGap.sm,
+                  Text(it.label, style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
+                ],
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(r.title, style: const TextStyle(fontWeight: FontWeight.w500)),
-                    Text(timeAgo, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                  ],
-                ),
-              ),
-              Text(
-                '${(accuracy * 100).toInt()}%',
-                style: TextStyle(
-                  color: accuracy >= 0.7 ? Colors.green : Colors.orange,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+            ),
           ),
         );
       }).toList(),
     );
   }
 
-  String _timeAgo(DateTime date) {
-    final diff = DateTime.now().difference(date);
-    if (diff.inMinutes < 1) return 'Agora mesmo';
-    if (diff.inHours < 1) return '${diff.inMinutes}min atrás';
-    if (diff.inHours < 24) return '${diff.inHours}h atrás';
-    return '${diff.inDays}d atrás';
+  Widget _recentActivity() {
+    final results = StorageService.getQuizResults().reversed.take(3).toList();
+    if (results.isEmpty) {
+      return AppCard(
+        padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(color: AppColor.primary.withValues(alpha: 0.08), shape: BoxShape.circle),
+              child: const Icon(Icons.rocket_launch_rounded, color: AppColor.primary, size: 28),
+            ),
+            AppGap.md,
+            const Text('Comece seu primeiro simulado', style: AppText.body),
+            AppGap.xs,
+            const Text('Seu progresso aparece aqui', style: AppText.caption),
+          ],
+        ),
+      );
+    }
+    return Column(
+      children: results.map((r) {
+        final pct = (r.accuracy * 100).round();
+        final good = r.accuracy >= 0.7;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: AppCard(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: (good ? AppColor.success : AppColor.warning).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(good ? Icons.check_circle_rounded : Icons.replay_rounded, color: good ? AppColor.success : AppColor.warning),
+                ),
+                AppGap.md,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(r.title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                      Text('${r.correctAnswers}/${r.totalQuestions} acertos', style: AppText.caption),
+                    ],
+                  ),
+                ),
+                Text('$pct%', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: good ? AppColor.success : AppColor.warning)),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
   }
 }
 
-class PullToRefresh extends StatelessWidget {
-  final Future<void> Function()? onRefresh;
-  final Widget child;
-
-  const PullToRefresh({super.key, required this.onRefresh, required this.child});
+/// Anel de progresso da meta diária (CustomPaint).
+class _GoalRing extends StatelessWidget {
+  final double progress;
+  const _GoalRing({required this.progress});
 
   @override
   Widget build(BuildContext context) {
-    return RefreshIndicator(
-      onRefresh: onRefresh ?? () async {},
-      child: child,
+    return SizedBox(
+      width: 76,
+      height: 76,
+      child: CustomPaint(
+        painter: _RingPainter(progress),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('${(progress * 100).round()}%', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
+              const Text('hoje', style: TextStyle(color: Colors.white70, fontSize: 10)),
+            ],
+          ),
+        ),
+      ),
     );
   }
+}
+
+class _RingPainter extends CustomPainter {
+  final double progress;
+  _RingPainter(this.progress);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 5;
+    final bg = Paint()
+      ..color = Colors.white24
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 7
+      ..strokeCap = StrokeCap.round;
+    final fg = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 7
+      ..strokeCap = StrokeCap.round;
+    canvas.drawCircle(center, radius, bg);
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      -math.pi / 2,
+      2 * math.pi * progress.clamp(0.0, 1.0),
+      false,
+      fg,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_RingPainter old) => old.progress != progress;
 }

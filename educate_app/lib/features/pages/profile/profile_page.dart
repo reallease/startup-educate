@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/br_states.dart';
 import '../settings/settings_page.dart';
 import '../../auth/view/pages/login_page.dart';
 import '../../../../services/auth_service.dart';
@@ -330,74 +331,170 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Future<void> _showLeaderboard(BuildContext context) async {
     if (!mounted) return;
+    final myState = _profile?['state'] as String?;
+    var showMyState = false;
+
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => FutureBuilder<List<Map<String, dynamic>>>(
-        future: CloudStorageService.getLeaderboard(),
-        builder: (ctx, snap) {
-          if (!snap.hasData) return const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(color: Color(0xFF7C3AED))));
-          final users = snap.data!;
-          return DraggableScrollableSheet(
-            initialChildSize: 0.6,
-            maxChildSize: 0.9,
-            expand: false,
-            builder: (_, controller) => SingleChildScrollView(
-              controller: controller,
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40, height: 4,
-                      decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(4)),
-                    ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) => DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          maxChildSize: 0.92,
+          expand: false,
+          builder: (_, controller) => SingleChildScrollView(
+            controller: controller,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40, height: 4,
+                    decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(4)),
                   ),
-                  const SizedBox(height: 16),
-                  const Text('Ranking Global', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-                  ...users.asMap().entries.map<Widget>((entry) {
-                    final i = entry.key;
-                    final u = entry.value;
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: i == 0 ? const Color(0xFF7C3AED).withValues(alpha: 0.08) : const Color(0xFFF9FAFB),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 32, height: 32,
+                ),
+                const SizedBox(height: 16),
+                const Text('Ranking', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 12),
+                // Abas Brasil / Meu Estado
+                Row(
+                  children: [
+                    _rankTab('🇧🇷 Brasil', !showMyState, () => setSheetState(() => showMyState = false)),
+                    const SizedBox(width: 8),
+                    _rankTab(
+                      myState != null ? '📍 ${BrStates.nameOf(myState)}' : '📍 Meu Estado',
+                      showMyState,
+                      () => setSheetState(() => showMyState = true),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (showMyState && myState == null)
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF7C3AED).withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        const Text('Defina seu estado para ver o ranking regional!',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 10),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()))
+                                .then((_) => _loadProfile());
+                          },
+                          child: const Text('Escolher estado', style: TextStyle(color: Colors.white)),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  FutureBuilder<List<Map<String, dynamic>>>(
+                    future: CloudStorageService.getLeaderboard(state: showMyState ? myState : null),
+                    builder: (ctx, snap) {
+                      if (snap.hasError) {
+                        return const Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Center(child: Text('Não foi possível carregar o ranking.\nVerifique sua conexão.', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey))),
+                        );
+                      }
+                      if (!snap.hasData) {
+                        return const SizedBox(height: 200, child: Center(child: CircularProgressIndicator(color: Color(0xFF7C3AED))));
+                      }
+                      final users = snap.data!;
+                      if (users.isEmpty) {
+                        return const Padding(
+                          padding: EdgeInsets.all(24),
+                          child: Center(child: Text('Ninguém no ranking ainda.\nSeja o primeiro!', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey))),
+                        );
+                      }
+                      return Column(
+                        children: users.asMap().entries.map<Widget>((entry) {
+                          final i = entry.key;
+                          final u = entry.value;
+                          final uf = u['state'] as String?;
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: i < 3 ? const Color(0xFF7C3AED) : Colors.grey[200],
-                              shape: BoxShape.circle,
+                              color: i == 0 ? const Color(0xFF7C3AED).withValues(alpha: 0.08) : const Color(0xFFF9FAFB),
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                            child: Center(
-                              child: Text(
-                                '${i + 1}',
-                                style: TextStyle(
-                                  color: i < 3 ? Colors.white : Colors.grey[600],
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 32, height: 32,
+                                  decoration: BoxDecoration(
+                                    color: i < 3 ? const Color(0xFF7C3AED) : Colors.grey[200],
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      i == 0 ? '🥇' : i == 1 ? '🥈' : i == 2 ? '🥉' : '${i + 1}',
+                                      style: TextStyle(
+                                        color: i < 3 ? Colors.white : Colors.grey[600],
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                              ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(u['name'] ?? 'Anônimo', style: const TextStyle(fontWeight: FontWeight.w600)),
+                                      if (uf != null)
+                                        Text(uf, style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                                    ],
+                                  ),
+                                ),
+                                Text('${u['xp']} XP', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF7C3AED))),
+                              ],
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(child: Text(u['name'] ?? 'Anônimo', style: const TextStyle(fontWeight: FontWeight.w600))),
-                          Text('${u['xp']} XP', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF7C3AED))),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ],
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _rankTab(String label, bool selected, VoidCallback onTap) {
+    return Expanded(
+      child: Material(
+        color: selected ? const Color(0xFF7C3AED) : const Color(0xFFF3F4F6),
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: selected ? Colors.white : Colors.grey[700],
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
               ),
             ),
-          );
-        },
+          ),
+        ),
       ),
     );
   }

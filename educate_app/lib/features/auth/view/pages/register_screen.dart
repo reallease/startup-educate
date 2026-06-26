@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../../core/br_states.dart';
 import '../../../../services/auth_service.dart';
 import '../../../../services/storage_service.dart';
 import '../../../pages/main_screen.dart';
@@ -21,6 +21,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscureP = true;
   bool _obscureC = true;
   String _object = 'ENEM';
+  String? _state;
   bool _accept = false;
 
   InputBorder _border() => OutlineInputBorder(
@@ -87,6 +88,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password: _passCtrl.text,
         name: _nameCtrl.text.trim(),
         objective: _object,
+        state: _state,
       );
 
       // Salvar localmente
@@ -272,6 +274,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                           );
                         }).toList(),
+                      ),
+                      const SizedBox(height: 16),
+
+                      const Text('Seu Estado',
+                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                      const SizedBox(height: 8),
+                      DropdownButtonFormField<String>(
+                        initialValue: _state,
+                        isExpanded: true,
+                        hint: const Text('Selecione sua UF (para o ranking regional)'),
+                        decoration: InputDecoration(
+                          prefixIcon: Icon(Icons.location_on_outlined, color: Colors.grey[600]),
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+                          border: _border(),
+                          enabledBorder: _border(),
+                          focusedBorder: _borderFocus(),
+                        ),
+                        items: BrStates.all.entries
+                            .map((e) => DropdownMenuItem(
+                                value: e.key, child: Text('${e.key} — ${e.value}')))
+                            .toList(),
+                        onChanged: (v) => setState(() => _state = v),
                       ),
                       const SizedBox(height: 16),
                       CheckboxListTile(

@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
+import '../../../core/gamification.dart';
 import '../../../core/models.dart';
+import '../../../services/cloud_storage_service.dart';
 import '../../../services/question_bank.dart';
 import '../../../services/storage_service.dart';
 
@@ -93,7 +95,7 @@ class _QuizPageState extends State<QuizPage> {
     }
   }
 
-  void _finishQuiz() {
+  Future<void> _finishQuiz() async {
     _timer?.cancel();
     final correctCount = _answers.where((a) => a).length;
     final result = QuizResult(
@@ -105,10 +107,31 @@ class _QuizPageState extends State<QuizPage> {
       timeSpentSeconds: _secondsElapsed,
       answers: _answers,
     );
-    StorageService.saveQuizResult(result);
-    setState(() {
-      _showResults = true;
-    });
+    // Salva localmente primeiro (atualiza streak) e mostra o resultado
+    // sem esperar a rede; a sincronização com o Supabase roda em segundo plano.
+    await StorageService.saveQuizResult(result);
+    if (mounted) {
+      setState(() {
+        _showResults = true;
+      });
+    }
+    _syncToCloud(result);
+  }
+
+  Future<void> _syncToCloud(QuizResult result) async {
+    try {
+      await CloudStorageService.syncQuizCompletion(
+        title: result.title,
+        totalQuestions: result.totalQuestions,
+        correctAnswers: result.correctAnswers,
+        timeSpentSeconds: result.timeSpentSeconds,
+        answers: result.answers,
+        streak: StorageService.getStreak(),
+        xpEarned: result.correctAnswers * Gamification.xpPerCorrect,
+      );
+    } catch (e) {
+      debugPrint('Sincronização com Supabase falhou: $e');
+    }
   }
 
   @override
